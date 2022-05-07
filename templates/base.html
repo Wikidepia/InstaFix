@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta content='text/html; charset=UTF-8' http-equiv='Content-Type' />
+    <meta content="{{ color }}" name="theme-color" />
+    <meta property="og:site_name" content="Instagram">
+
+    <meta name="twitter:card" content="player" />
+    <meta name="twitter:title" content="{{ full_name }} (@{{ username }})" />
+    <meta name="twitter:image" content="{{ image }}" />
+    {% if video is defined %}
+    <meta name="twitter:player:width" content="720" />
+    <meta name="twitter:player:height" content="480" />
+    <meta name="twitter:player:stream" content="{{ video }}" />
+    <meta name="twitter:player:stream:content_type" content="video/mp4" />
+    {% endif %}
+
+    <meta property="og:url" content="{{ url }}" />
+    {% if video is defined %}
+    <meta property="og:video" content="{{ video }}" />
+    <meta property="og:video:secure_url" content="{{ video }}" />
+    <meta property="og:video:type" content="video/mp4" />
+    <meta property="og:video:width" content="720" />
+    <meta property="og:video:height" content="480" />
+    {% endif %}
+    <meta property="og:image" content="{{ image }}" />
+    <meta name="description" content="{{ description }}" />
+
+    <meta http-equiv="refresh" content="0; url = {{ url }}" />
+</head>
+<body>
+    Redirecting you to the tweet in a moment. <a href="{{ url }}">Or click here.</a>
+</body>
+</html>
