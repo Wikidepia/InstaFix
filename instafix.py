@@ -64,7 +64,9 @@ def get_data(url):
 
 
 @app.get("/p/{post_id}", response_class=HTMLResponse)
+@app.get("/p/{post_id}/", response_class=HTMLResponse)
 @app.get("/p/{post_id}/{num}", response_class=HTMLResponse)
+@app.get("/p/{post_id}/{num}/", response_class=HTMLResponse)
 async def read_item(request: Request, post_id: str, num: Optional[int] = 1):
     post_url = f"https://instagram.com/p/{post_id}"
     if request.headers.get("User-Agent") not in CRAWLER_UA:
