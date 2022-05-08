@@ -57,7 +57,7 @@ def get_data(url):
         # Remove window.__additionalDataLoaded
         data = re.sub(r"window.__additionalDataLoaded\('/p/.*/',", "", text)
         # Remove trailing ');'
-        data = re.sub(r"\);\s*$", "", data)
+        data = data.rstrip(");")
     data = json.loads(data)
     return data
 
