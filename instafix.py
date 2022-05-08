@@ -63,19 +63,21 @@ def get_data(url):
 
 @app.get("/p/{post_id}", response_class=HTMLResponse)
 async def read_item(request: Request, post_id: str):
+    images = []
     post_url = f"https://instagram.com/p/{post_id}"
     if request.headers.get("User-Agent") not in CRAWLER_UA:
         return RedirectResponse(post_url, status_code=302)
     data = get_data(post_url)
 
     item = data["items"][0]
-    media = item["carousel_media"][0] if "carousel_media" in item else item
-    image_url = media["image_versions2"]["candidates"][0]["url"]
-    description = media["caption"]["text"]
+    media_lst = item["carousel_media"] if "carousel_media" in item else [item]
+    for media in media_lst:
+        images.append(media["image_versions2"]["candidates"][0]["url"])
 
+    description = item["caption"]["text"]
     full_name = item["user"]["full_name"]
     username = item["user"]["username"]
-    media_dict[post_id] = media
+    media_dict[post_id] = media_lst
 
     ctx = {
         "request": request,
@@ -88,13 +90,13 @@ async def read_item(request: Request, post_id: str):
     if "video_versions" in media:
         ctx["video"] = f"/videos/{post_id}"
     else:
-        ctx["image"] = image_url
+        ctx["images"] = images
     return templates.TemplateResponse("base.html", ctx)
 
 
 @app.get("/videos/{post_id}")
 def videos(request: Request, post_id: str):
-    media = media_dict[post_id]
+    media = media_dict[post_id][0]
     video_urls = media["video_versions"][-1]["url"]
     if request.headers.get("User-Agent") not in CRAWLER_UA:
         return RedirectResponse(video_urls, status_code=302)
