@@ -1,6 +1,7 @@
 import json
 import re
 from http.cookiejar import MozillaCookieJar
+from typing import Optional
 
 import requests
 from fastapi import FastAPI, Request
@@ -62,8 +63,8 @@ def get_data(url):
 
 
 @app.get("/p/{post_id}", response_class=HTMLResponse)
-async def read_item(request: Request, post_id: str):
-    images = []
+@app.get("/p/{post_id}/{num}", response_class=HTMLResponse)
+async def read_item(request: Request, post_id: str, num: Optional[int] = 1):
     post_url = f"https://instagram.com/p/{post_id}"
     if request.headers.get("User-Agent") not in CRAWLER_UA:
         return RedirectResponse(post_url, status_code=302)
@@ -71,13 +72,13 @@ async def read_item(request: Request, post_id: str):
 
     item = data["items"][0]
     media_lst = item["carousel_media"] if "carousel_media" in item else [item]
-    for media in media_lst:
-        images.append(media["image_versions2"]["candidates"][0]["url"])
+    media = media_lst[num - 1]
 
+    image = media["image_versions2"]["candidates"][0]
+    image_url = image["url"]
     description = item["caption"]["text"]
     full_name = item["user"]["full_name"]
     username = item["user"]["username"]
-    media_dict[post_id] = media_lst
 
     ctx = {
         "request": request,
@@ -88,20 +89,29 @@ async def read_item(request: Request, post_id: str):
     }
 
     if "video_versions" in media:
-        ctx["video"] = f"/videos/{post_id}"
+        video = media["video_versions"][-1]
+        ctx["video"] = f"/videos/{post_id}/{num}"
+        ctx["width"] = video["width"]
+        ctx["height"] = video["height"]
+        ctx["card"] = "player"
     else:
-        ctx["images"] = images
+        ctx["image"] = image_url
+        ctx["width"] = image["width"]
+        ctx["height"] = image["height"]
+        ctx["card"] = "summary_large_image"
+
+    media_dict[post_id] = media_lst
     return templates.TemplateResponse("base.html", ctx)
 
 
-@app.get("/videos/{post_id}")
-def videos(request: Request, post_id: str):
-    media = media_dict[post_id][0]
-    video_urls = media["video_versions"][-1]["url"]
+@app.get("/videos/{post_id}/{num}")
+def videos(request: Request, post_id: str, num: int):
+    media = media_dict[post_id][num - 1]
+    video_url = media["video_versions"][-1]["url"]
     if request.headers.get("User-Agent") not in CRAWLER_UA:
-        return RedirectResponse(video_urls, status_code=302)
+        return RedirectResponse(video_url, status_code=302)
     return StreamingResponse(
-        requests.get(video_urls, stream=True).iter_content(chunk_size=1024),
+        requests.get(video_url, stream=True).iter_content(chunk_size=1024),
         media_type="video/mp4",
         headers={"Content-Disposition": f"inline; filename={post_id}.mp4"},
     )

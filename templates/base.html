@@ -3,35 +3,35 @@
 
 <head>
     <meta content='text/html; charset=UTF-8' http-equiv='Content-Type' />
+    <meta content="#833AB4" name="theme-color" />
 
-    <meta name="twitter:card" content="player" />
+    <meta name="twitter:card" content="{{ card }}" />
     <meta name="twitter:title" content="{{ full_name }} (@{{ username }})" />
-    <meta name="twitter:card" content="summary_large_image" />
-    {% for image in images %}
     <meta name="twitter:image" content="{{ image }}" />
-    {% endfor %}
+
     {% if video is defined %}
-    <meta name="twitter:player:width" content="720" />
-    <meta name="twitter:player:height" content="480" />
+    <meta name="twitter:player:width" content="{{ width }}" />
+    <meta name="twitter:player:height" content="{{ height }}" />
     <meta name="twitter:player:stream" content="{{ video }}" />
     <meta name="twitter:player:stream:content_type" content="video/mp4" />
     {% endif %}
 
     <meta property="og:site_name" content="Instagram">
     <meta property="og:url" content="{{ url }}" />
+    <meta property="og:description" content="{{ description }}" />
+    <meta property="og:image" content="{{ image }}" />
+    <meta property="og:image:width" content="{{ width }}" />
+    <meta property="og:image:height" content="{{ height }}" />
+
     {% if video is defined %}
     <meta property="og:video" content="{{ video }}" />
     <meta property="og:video:secure_url" content="{{ video }}" />
     <meta property="og:video:type" content="video/mp4" />
-    <meta property="og:video:width" content="720" />
-    <meta property="og:video:height" content="480" />
+    <meta property="og:video:width" content="{{ width }}" />
+    <meta property="og:video:height" content="{{ height }}" />
     {% endif %}
-    {% for image in images %}
-    <meta property="og:image" content="{{ image }}:large" />
-    <meta property="og:image:user_generated" content="true">
-    {% endfor %}
-    <meta name="description" content="{{ description }}" />
 
+    <meta name="description" content="{{ description }}" />
     <meta http-equiv="refresh" content="0; url = {{ url }}" />
 </head>
 
