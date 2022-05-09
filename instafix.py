@@ -17,17 +17,16 @@ r = redis.Redis(decode_responses=True)
 cookies = MozillaCookieJar("cookies.txt")
 cookies.load()
 
-CRAWLER_UA = set(
-    [
-        "facebookexternalhit/1.1",
-        "TelegramBot (like TwitterBot)",
-        "Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)",
-        "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)",
-        "Mozilla/5.0 (compatible; January/1.0; +https://gitlab.insrt.uk/revolt/january)",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:38.0) Gecko/20100101 Firefox/38.0",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_1) AppleWebKit/601.2.4 (KHTML, like Gecko) Version/9.0.1 Safari/601.2.4 facebookexternalhit/1.1 Facebot Twitterbot/1.0",
-    ]
-)
+CRAWLER_UA = {
+    "facebookexternalhit/1.1",
+    "TelegramBot (like TwitterBot)",
+    "Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)",
+    "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)",
+    "Mozilla/5.0 (compatible; January/1.0; +https://gitlab.insrt.uk/revolt/january)",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:38.0) Gecko/20100101 Firefox/38.0",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_1) AppleWebKit/601.2.4 (KHTML, like Gecko) Version/9.0.1 Safari/601.2.4 facebookexternalhit/1.1 Facebot Twitterbot/1.0",
+}
+
 
 headers = {
     "authority": "www.instagram.com",
