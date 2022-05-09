@@ -1,8 +1,8 @@
-import json
 import re
 from http.cookiejar import MozillaCookieJar
 from typing import Optional
 
+import orjson
 import requests
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -59,7 +59,7 @@ def get_data(url):
         # Remove trailing ');'
         data = data.rstrip(");")
         break
-    data = json.loads(data)
+    data = orjson.loads(data)
     return data
 
 
