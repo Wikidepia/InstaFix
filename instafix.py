@@ -111,10 +111,4 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = 1):
 def videos(request: Request, post_id: str, num: int):
     media = media_dict[post_id][num - 1]
     video_url = media["video_versions"][-1]["url"]
-    if request.headers.get("User-Agent") not in CRAWLER_UA:
-        return RedirectResponse(video_url, status_code=302)
-    return StreamingResponse(
-        requests.get(video_url, stream=True).iter_content(chunk_size=1024),
-        media_type="video/mp4",
-        headers={"Content-Disposition": f"inline; filename={post_id}.mp4"},
-    )
+    return RedirectResponse(video_url, status_code=302)
