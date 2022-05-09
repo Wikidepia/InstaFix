@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "InstaFix"
+version = "0.1.0"
+description = "Fix Instagram embeds in Discord (and Telegram!)"
+authors = ["Akmal <magchuz@pm.me>"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+orjson = "^3.6.8"
+redis = "^4.3.1"
+requests = "^2.27.1"
+fastapi = {extras = ["all"], version = "^0.76.0"}
+lxml = "^4.8.0"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
