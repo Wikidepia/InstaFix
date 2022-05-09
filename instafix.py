@@ -5,7 +5,7 @@ from typing import Optional
 
 import requests
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from lxml import html
 
@@ -19,13 +19,12 @@ cookies.load()
 CRAWLER_UA = set(
     [
         "facebookexternalhit/1.1",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_1) AppleWebKit/601.2.4 (KHTML, like Gecko) Version/9.0.1 Safari/601.2.4 facebookexternalhit/1.1 Facebot Twitterbot/1.0",
-        "facebookexternalhit/1.1",
-        "Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:38.0) Gecko/20100101 Firefox/38.0",
-        "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)",
         "TelegramBot (like TwitterBot)",
+        "Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)",
+        "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)",
         "Mozilla/5.0 (compatible; January/1.0; +https://gitlab.insrt.uk/revolt/january)",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:38.0) Gecko/20100101 Firefox/38.0",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_1) AppleWebKit/601.2.4 (KHTML, like Gecko) Version/9.0.1 Safari/601.2.4 facebookexternalhit/1.1 Facebot Twitterbot/1.0",
     ]
 )
 
@@ -59,6 +58,7 @@ def get_data(url):
         data = re.sub(r"window.__additionalDataLoaded\('/p/.*/',", "", text)
         # Remove trailing ');'
         data = data.rstrip(");")
+        break
     data = json.loads(data)
     return data
 
@@ -67,12 +67,12 @@ def get_data(url):
 @app.get("/p/{post_id}/", response_class=HTMLResponse)
 @app.get("/p/{post_id}/{num}", response_class=HTMLResponse)
 @app.get("/p/{post_id}/{num}/", response_class=HTMLResponse)
-async def read_item(request: Request, post_id: str, num: Optional[int] = 1):
+def read_item(request: Request, post_id: str, num: Optional[int] = 1):
     post_url = f"https://instagram.com/p/{post_id}"
     if request.headers.get("User-Agent") not in CRAWLER_UA:
         return RedirectResponse(post_url, status_code=302)
-    data = get_data(post_url)
 
+    data = get_data(post_url)
     item = data["items"][0]
     media_lst = item["carousel_media"] if "carousel_media" in item else [item]
     media = media_lst[num - 1]
@@ -108,7 +108,7 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = 1):
 
 
 @app.get("/videos/{post_id}/{num}")
-def videos(request: Request, post_id: str, num: int):
+def videos(post_id: str, num: int):
     media = media_dict[post_id][num - 1]
     video_url = media["video_versions"][-1]["url"]
     return RedirectResponse(video_url, status_code=302)
