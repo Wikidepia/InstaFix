@@ -3,6 +3,7 @@ from http.cookiejar import MozillaCookieJar
 from typing import Optional
 
 import orjson
+import redis
 import requests
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -12,7 +13,7 @@ from lxml import html
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
-media_dict = {}
+r = redis.Redis(decode_responses=True)
 cookies = MozillaCookieJar("cookies.txt")
 cookies.load()
 
@@ -48,8 +49,8 @@ headers = {
 
 
 def get_data(url):
-    r = requests.get(url, headers=headers, cookies=cookies)
-    tree = html.fromstring(r.text)
+    response = requests.get(url, headers=headers, cookies=cookies)
+    tree = html.fromstring(response.text)
     for script in tree.xpath("//script"):
         text = script.text or ""
         if "device_timestamp" not in text:
@@ -72,13 +73,19 @@ def read_item(request: Request, post_id: str, num: Optional[int] = 1):
     if request.headers.get("User-Agent") not in CRAWLER_UA:
         return RedirectResponse(post_url, status_code=302)
 
-    data = get_data(post_url)
-    item = data["items"][0]
+    item = r.get(post_id)
+    if item is not None:
+        item = orjson.loads(item)
+    else:
+        data = get_data(post_url)
+        item = data["items"][0]
+        r.set(post_id, orjson.dumps(item), ex=3600)
+
     media_lst = item["carousel_media"] if "carousel_media" in item else [item]
     media = media_lst[num - 1]
-
     image = media["image_versions2"]["candidates"][0]
     image_url = image["url"]
+
     description = item["caption"]["text"]
     full_name = item["user"]["full_name"]
     username = item["user"]["username"]
@@ -103,12 +110,13 @@ def read_item(request: Request, post_id: str, num: Optional[int] = 1):
         ctx["height"] = image["height"]
         ctx["card"] = "summary_large_image"
 
-    media_dict[post_id] = media_lst
     return templates.TemplateResponse("base.html", ctx)
 
 
 @app.get("/videos/{post_id}/{num}")
 def videos(post_id: str, num: int):
-    media = media_dict[post_id][num - 1]
+    item = orjson.loads(r.get(post_id))
+    media_lst = item["carousel_media"] if "carousel_media" in item else [item]
+    media = media_lst[num - 1]
     video_url = media["video_versions"][-1]["url"]
     return RedirectResponse(video_url, status_code=302)
