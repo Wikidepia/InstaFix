@@ -1,4 +1,3 @@
-import re
 from http.cookiejar import MozillaCookieJar
 from typing import Optional
 
@@ -8,7 +7,6 @@ import requests
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from lxml import html
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
@@ -48,18 +46,9 @@ headers = {
 
 
 def get_data(url):
+    url += "?__a=1"
     response = requests.get(url, headers=headers, cookies=cookies)
-    tree = html.fromstring(response.text)
-    for script in tree.xpath("//script"):
-        text = script.text or ""
-        if "device_timestamp" not in text:
-            continue
-        # Remove window.__additionalDataLoaded
-        data = re.sub(r"window.__additionalDataLoaded\('/p/.*/',", "", text)
-        # Remove trailing ');'
-        data = data.rstrip(");")
-        break
-    data = orjson.loads(data)
+    data = orjson.loads(response.text)
     return data
 
 
@@ -114,7 +103,13 @@ def read_item(request: Request, post_id: str, num: Optional[int] = 1):
 
 @app.get("/videos/{post_id}/{num}")
 def videos(post_id: str, num: int):
-    item = orjson.loads(r.get(post_id))
+    item = r.get(post_id)
+    if item is not None:
+        item = orjson.loads(item)
+    else:
+        data = get_data(f"https://instagram.com/p/{post_id}")
+        item = data["items"][0]
+        r.set(post_id, orjson.dumps(item), ex=3600)
     media_lst = item["carousel_media"] if "carousel_media" in item else [item]
     media = media_lst[num - 1]
     video_url = media["video_versions"][-1]["url"]
