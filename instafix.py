@@ -72,7 +72,6 @@ def read_item(request: Request, post_id: str, num: Optional[int] = 1):
     media_lst = item["carousel_media"] if "carousel_media" in item else [item]
     media = media_lst[num - 1]
     image = media["image_versions2"]["candidates"][0]
-    image_url = image["url"]
 
     description = item["caption"]["text"]
     full_name = item["user"]["full_name"]
@@ -93,7 +92,7 @@ def read_item(request: Request, post_id: str, num: Optional[int] = 1):
         ctx["height"] = video["height"]
         ctx["card"] = "player"
     else:
-        ctx["image"] = image_url
+        ctx["image"] = f"/images/{post_id}/{num}"
         ctx["width"] = image["width"]
         ctx["height"] = image["height"]
         ctx["card"] = "summary_large_image"
@@ -110,3 +109,14 @@ def videos(post_id: str, num: int):
     media = media_lst[num - 1]
     video_url = media["video_versions"][-1]["url"]
     return RedirectResponse(video_url, status_code=302)
+
+
+@app.get("/images/{post_id}/{num}")
+def images(post_id: str, num: int):
+    data = get_data(post_id)
+    item = data["items"][0]
+
+    media_lst = item["carousel_media"] if "carousel_media" in item else [item]
+    media = media_lst[num - 1]
+    image_url = media["image_versions2"]["candidates"][0]["url"]
+    return RedirectResponse(image_url, status_code=302)
