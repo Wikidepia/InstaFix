@@ -45,10 +45,15 @@ headers = {
 }
 
 
-def get_data(url):
-    url += "?__a=1"
-    response = requests.get(url, headers=headers, cookies=cookies)
-    data = orjson.loads(response.text)
+def get_data(post_id):
+    api_url = f"https://instagram.com/p/{post_id}?__a=1"
+    data = r.get(post_id)
+    if data is None:
+        response = requests.get(api_url, headers=headers, cookies=cookies)
+        data = response.text
+        r.set(post_id, data, ex=3600)
+
+    data = orjson.loads(data)
     return data
 
 
@@ -61,13 +66,8 @@ def read_item(request: Request, post_id: str, num: Optional[int] = 1):
     if request.headers.get("User-Agent") not in CRAWLER_UA:
         return RedirectResponse(post_url, status_code=302)
 
-    item = r.get(post_id)
-    if item is not None:
-        item = orjson.loads(item)
-    else:
-        data = get_data(post_url)
-        item = data["items"][0]
-        r.set(post_id, orjson.dumps(item), ex=3600)
+    data = get_data(post_id)
+    item = data["items"][0]
 
     media_lst = item["carousel_media"] if "carousel_media" in item else [item]
     media = media_lst[num - 1]
@@ -103,13 +103,9 @@ def read_item(request: Request, post_id: str, num: Optional[int] = 1):
 
 @app.get("/videos/{post_id}/{num}")
 def videos(post_id: str, num: int):
-    item = r.get(post_id)
-    if item is not None:
-        item = orjson.loads(item)
-    else:
-        data = get_data(f"https://instagram.com/p/{post_id}")
-        item = data["items"][0]
-        r.set(post_id, orjson.dumps(item), ex=3600)
+    data = get_data(post_id)
+    item = data["items"][0]
+
     media_lst = item["carousel_media"] if "carousel_media" in item else [item]
     media = media_lst[num - 1]
     video_url = media["video_versions"][-1]["url"]
