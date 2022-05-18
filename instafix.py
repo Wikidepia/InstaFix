@@ -51,7 +51,7 @@ def get_data(post_id):
     if data is None:
         response = requests.get(api_url, headers=headers, cookies=cookies)
         data = response.text
-        r.set(post_id, data, ex=3600)
+        r.set(post_id, data, ex=12 * 3600)
 
     data = orjson.loads(data)
     return data
