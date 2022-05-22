@@ -125,3 +125,20 @@ def images(post_id: str, num: int):
     media = media_lst[num - 1]
     image_url = media["image_versions2"]["candidates"][0]["url"]
     return RedirectResponse(image_url, status_code=302)
+
+
+@app.get("/uptime")
+def uptime(request: Request):
+    uptime_ua = "Mozilla/5.0 (compatible; UptimeRobot/2.0; http://www.uptimerobot.com/)"
+    if request.headers.get("User-Agent") != uptime_ua:
+        return RedirectResponse(
+            "https://github.com/Wikidepia/InstaFix", status_code=302
+        )
+
+    api_url = f"https://instagram.com/p/CcsOkR7hTBR?__a=1"
+    data = requests.get(api_url, headers=headers, cookies=cookies).json()
+    item = data["items"][0]
+
+    media_lst = item["carousel_media"] if "carousel_media" in item else [item]
+    image_url = media_lst[0]["image_versions2"]["candidates"][0]["url"]
+    return RedirectResponse(image_url, status_code=302)
