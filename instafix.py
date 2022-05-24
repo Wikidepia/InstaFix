@@ -1,4 +1,3 @@
-import re
 from http.cookiejar import MozillaCookieJar
 from typing import Optional
 
@@ -25,9 +24,6 @@ CRAWLER_UA = {
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:38.0) Gecko/20100101 Firefox/38.0",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_1) AppleWebKit/601.2.4 (KHTML, like Gecko) Version/9.0.1 Safari/601.2.4 facebookexternalhit/1.1 Facebot Twitterbot/1.0",
 }
-VALID_URL_RE = (
-    r"(https?://(?:www\.)?instagram\.com(?:/[^/]+)?/(?:p|tv|reel)/([^/?#&]+))"
-)
 
 headers = {
     "authority": "www.instagram.com",
@@ -71,9 +67,7 @@ def root():
 @app.get("/tv/{post_id}", response_class=HTMLResponse)
 def read_item(request: Request, post_id: str, num: Optional[int] = 1):
     post_url = f"https://instagram.com/p/{post_id}"
-    if request.headers.get("User-Agent") not in CRAWLER_UA or not re.match(
-        VALID_URL_RE, post_url
-    ):
+    if request.headers.get("User-Agent") not in CRAWLER_UA:
         return RedirectResponse(post_url, status_code=302)
 
     data = get_data(post_id)
@@ -81,7 +75,6 @@ def read_item(request: Request, post_id: str, num: Optional[int] = 1):
 
     media_lst = item["carousel_media"] if "carousel_media" in item else [item]
     media = media_lst[num - 1]
-    image = media["image_versions2"]["candidates"][0]
 
     description = item["caption"]["text"]
     full_name = item["user"]["full_name"]
@@ -102,6 +95,7 @@ def read_item(request: Request, post_id: str, num: Optional[int] = 1):
         ctx["height"] = video["height"]
         ctx["card"] = "player"
     else:
+        image = media["image_versions2"]["candidates"][0]
         ctx["image"] = f"/images/{post_id}/{num}"
         ctx["width"] = image["width"]
         ctx["height"] = image["height"]
