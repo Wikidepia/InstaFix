@@ -4,12 +4,16 @@ from typing import Optional
 import orjson
 import redis
 import requests
+import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
+sentry_sdk.init(
+    "https://b7c2af75d8e3450f83611241634a2882@o946916.ingest.sentry.io/6438390",
+)
 
 r = redis.Redis(decode_responses=True)
 cookies = MozillaCookieJar("cookies.txt")
