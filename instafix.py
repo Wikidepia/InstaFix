@@ -113,7 +113,7 @@ def videos(post_id: str, num: int):
 
     media_lst = item["carousel_media"] if "carousel_media" in item else [item]
     media = media_lst[num - 1]
-    video_url = media["video_versions"][-1]["url"]
+    video_url = media["video_versions"][0]["url"]
     return RedirectResponse(video_url, status_code=302)
 
 
