@@ -86,6 +86,8 @@ def read_item(request: Request, post_id: str, num: Optional[int] = 1):
         "description": description,
         "full_name": full_name,
         "username": username,
+        "media_num": num,
+        "media_total": len(media_lst),
     }
 
     if "video_versions" in media:
