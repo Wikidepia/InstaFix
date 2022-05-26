@@ -80,7 +80,7 @@ def read_item(request: Request, post_id: str, num: Optional[int] = 1):
     media_lst = item["carousel_media"] if "carousel_media" in item else [item]
     media = media_lst[num - 1]
 
-    description = item.get("caption", {}).get("text", "")
+    description = item["caption"]["text"] if "caption" != None else ""
     full_name = item["user"]["full_name"]
     username = item["user"]["username"]
 
