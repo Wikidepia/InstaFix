@@ -1,19 +1,16 @@
+import re
 from http.cookiejar import MozillaCookieJar
 from typing import Optional
 
 import orjson
 import redis
 import requests
-import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
-sentry_sdk.init(
-    "https://b7c2af75d8e3450f83611241634a2882@o946916.ingest.sentry.io/6438390",
-)
 
 r = redis.Redis(decode_responses=True)
 cookies = MozillaCookieJar("cookies.txt")
@@ -29,31 +26,32 @@ CRAWLER_UA = {
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_1) AppleWebKit/601.2.4 (KHTML, like Gecko) Version/9.0.1 Safari/601.2.4 facebookexternalhit/1.1 Facebot Twitterbot/1.0",
 }
 
+
 headers = {
-    "authority": "www.instagram.com",
-    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+    "accept": "*/*",
     "accept-language": "en-US,en;q=0.9",
-    "cache-control": "no-cache",
-    "pragma": "no-cache",
-    "sec-ch-ua": '" Not A;Brand";v="99", "Chromium";v="100"',
-    "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-platform": '"macOS"',
-    "sec-fetch-dest": "document",
-    "sec-fetch-mode": "navigate",
-    "sec-fetch-site": "none",
-    "sec-fetch-user": "?1",
+    "origin": "https://www.instagram.com",
     "referer": "https://www.instagram.com/",
-    "upgrade-insecure-requests": "1",
-    "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.60 Safari/537.36",
+    "sec-fetch-dest": "empty",
+    "sec-fetch-mode": "cors",
+    "sec-fetch-site": "same-site",
+    "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1",
+    "x-ig-app-id": "1217981644879628",
 }
 
 
 def get_data(post_id):
-    api_url = f"https://instagram.com/p/{post_id}?__a=1"
+    post_url = f"https://instagram.com/p/{post_id}"
     data = r.get(post_id)
     if data is None:
-        response = requests.get(api_url, headers=headers, cookies=cookies)
-        data = response.text
+        post_resp = requests.get(post_url, cookies=cookies, headers=headers)
+        media_id = re.search(r'"media_id":"(\d+)"', post_resp.text).group(1)
+        api_resp = requests.get(
+            f"https://i.instagram.com/api/v1/media/{media_id}/info/",
+            cookies=cookies,
+            headers=headers,
+        )
+        data = api_resp.text
         r.set(post_id, data, ex=12 * 3600)
 
     data = orjson.loads(data)
