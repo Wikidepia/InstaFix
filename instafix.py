@@ -58,9 +58,11 @@ def get_data(post_id):
     return data
 
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 def root():
-    return RedirectResponse("https://github.com/Wikidepia/InstaFix", status_code=302)
+    with open("templates/home.html") as f:
+        html = f.read()
+    return HTMLResponse(content=html)
 
 
 @app.get("/p/{post_id}", response_class=HTMLResponse)
