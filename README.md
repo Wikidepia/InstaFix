@@ -4,8 +4,8 @@
 
 InstaFix serves fixed Instagram image and video embeds. Heavily inspired by [fxtwitter.com](https://github.com/robinuniverse/TwitFix).
 
-## Update (28-05-2022)
+## How to use
 
-I will stop hosting InstaFix on ddinstagram.com. I might continue to host it on different domain sometimes =)
+Add `dd` before `instagram.com` to show Instagram embeds.
 
-<img width="428" alt="Cloudflare received a trademark infringement complaint regarding ddinstagram.com" src="https://user-images.githubusercontent.com/72781956/171634994-6204803e-9a47-4609-93f1-d6e063cf2cc4.png">
+https://user-images.githubusercontent.com/72781956/168544556-31009b0e-62e8-4d4c-909b-434ad146e118.mp4
