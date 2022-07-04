@@ -1,10 +1,10 @@
+import json
 import re
 from http.cookiejar import MozillaCookieJar
 from typing import Optional
 
-import orjson
-import redis
-import requests
+import aioredis
+import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -12,7 +12,6 @@ from fastapi.templating import Jinja2Templates
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
-r = redis.Redis(decode_responses=True)
 cookies = MozillaCookieJar("cookies.txt")
 cookies.load()
 
@@ -23,7 +22,7 @@ CRAWLER_UA = {
     "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)",
     "Mozilla/5.0 (compatible; January/1.0; +https://gitlab.insrt.uk/revolt/january)",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:38.0) Gecko/20100101 Firefox/38.0",
-    "Mozilla/5.0 (Windows; U; Windows NT 10.0; en-US; Valve Steam Client/default/0; ) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.117 Safari/537.36", 
+    "Mozilla/5.0 (Windows; U; Windows NT 10.0; en-US; Valve Steam Client/default/0; ) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.117 Safari/537.36",
     "Mozilla/5.0 (Windows; U; Windows NT 10.0; en-US; Valve Steam Client/default/1596241936; ) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.117 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_1) AppleWebKit/601.2.4 (KHTML, like Gecko) Version/9.0.1 Safari/601.2.4 facebookexternalhit/1.1 Facebot Twitterbot/1.0",
 }
@@ -42,22 +41,35 @@ headers = {
 }
 
 
-def get_data(post_id):
+async def get_data(request: Request, post_id: str) -> Optional[dict]:
+    r = request.app.state.redis
     post_url = f"https://instagram.com/p/{post_id}"
-    data = r.get(post_id)
+    data = await r.get(post_id)
     if data is None:
-        post_resp = requests.get(post_url, cookies=cookies, headers=headers)
-        media_id = re.search(r'"media_id":"(\d+)"', post_resp.text).group(1)
-        api_resp = requests.get(
-            f"https://i.instagram.com/api/v1/media/{media_id}/info/",
-            cookies=cookies,
-            headers=headers,
-        )
-        data = api_resp.text
-        r.set(post_id, data, ex=12 * 3600)
-
-    data = orjson.loads(data)
+        async with httpx.AsyncClient(
+            headers=headers, cookies=cookies, follow_redirects=True
+        ) as client:
+            post_text = (await client.get(post_url)).text
+            media_id = re.search(r'"media_id":"(\d+)"', post_text).group(1)
+            api_resp = await client.get(
+                f"https://i.instagram.com/api/v1/media/{media_id}/info/",
+            )
+            data = api_resp.text
+        await r.set(post_id, data, ex=12 * 3600)
+    data = json.loads(data)
     return data
+
+
+@app.on_event("startup")
+async def create_redis():
+    app.state.redis = await aioredis.from_url(
+        "redis://localhost:6379", encoding="utf-8", decode_responses=True
+    )
+
+
+@app.on_event("shutdown")
+async def close_redis():
+    await app.state.redis.close()
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -71,12 +83,12 @@ def root():
 @app.get("/p/{post_id}/{num}", response_class=HTMLResponse)
 @app.get("/reel/{post_id}", response_class=HTMLResponse)
 @app.get("/tv/{post_id}", response_class=HTMLResponse)
-def read_item(request: Request, post_id: str, num: Optional[int] = 1):
+async def read_item(request: Request, post_id: str, num: Optional[int] = 1):
     post_url = f"https://instagram.com/p/{post_id}"
     if request.headers.get("User-Agent") not in CRAWLER_UA:
         return RedirectResponse(post_url, status_code=302)
 
-    data = get_data(post_id)
+    data = await get_data(request, post_id)
     item = data["items"][0]
 
     media_lst = item["carousel_media"] if "carousel_media" in item else [item]
@@ -113,8 +125,8 @@ def read_item(request: Request, post_id: str, num: Optional[int] = 1):
 
 
 @app.get("/videos/{post_id}/{num}")
-def videos(post_id: str, num: int):
-    data = get_data(post_id)
+async def videos(post_id: str, num: int):
+    data = await get_data(post_id)
     item = data["items"][0]
 
     media_lst = item["carousel_media"] if "carousel_media" in item else [item]
@@ -124,8 +136,8 @@ def videos(post_id: str, num: int):
 
 
 @app.get("/images/{post_id}/{num}")
-def images(post_id: str, num: int):
-    data = get_data(post_id)
+async def images(post_id: str, num: int):
+    data = await get_data(post_id)
     item = data["items"][0]
 
     media_lst = item["carousel_media"] if "carousel_media" in item else [item]
