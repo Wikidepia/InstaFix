@@ -16,10 +16,12 @@ cookies = MozillaCookieJar("cookies.txt")
 cookies.load()
 
 CRAWLER_UA = {
+    "facebookcatalog/1.0",
     "facebookexternalhit/1.1",
     "TelegramBot (like TwitterBot)",
     "Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)",
     "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)",
+    "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
     "Mozilla/5.0 (compatible; January/1.0; +https://gitlab.insrt.uk/revolt/january)",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 11.6; rv:92.0) Gecko/20100101 Firefox/92.0",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:38.0) Gecko/20100101 Firefox/38.0",
