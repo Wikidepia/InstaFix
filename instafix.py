@@ -53,18 +53,16 @@ headers = {
 
 async def get_data(request: Request, post_id: str) -> Optional[dict]:
     r = request.app.state.redis
+    client = app.state.client
     post_url = f"https://instagram.com/p/{post_id}"
     data = await r.get(post_id)
     if data is None:
-        async with httpx.AsyncClient(
-            headers=headers, cookies=cookies, follow_redirects=True
-        ) as client:
-            post_text = (await client.get(post_url)).text
-            media_id = re.search(r'"media_id":"(\d+)"', post_text).group(1)
-            api_resp = await client.get(
-                f"https://i.instagram.com/api/v1/media/{media_id}/info/",
-            )
-            data = api_resp.text
+        post_text = (await client.get(post_url)).text
+        media_id = re.search(r'"media_id":"(\d+)"', post_text).group(1)
+        api_resp = await client.get(
+            f"https://i.instagram.com/api/v1/media/{media_id}/info/",
+        )
+        data = api_resp.text
         await r.set(post_id, data, ex=12 * 3600)
     data = json.loads(data)
     return data
@@ -75,11 +73,16 @@ async def create_redis():
     app.state.redis = await aioredis.from_url(
         "redis://localhost:6379", encoding="utf-8", decode_responses=True
     )
+    app.state.client = httpx.AsyncClient(
+        headers=headers, cookies=cookies, follow_redirects=True
+    )
 
 
 @app.on_event("shutdown")
 async def close_redis():
     await app.state.redis.close()
+    await app.state.client.aclose()
+
 
 
 @app.get("/", response_class=HTMLResponse)
