@@ -1,13 +1,20 @@
 import json
+import os
 import re
 from http.cookiejar import MozillaCookieJar
 from typing import Optional
 
 import aioredis
 import httpx
+import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+
+if "SENTRY_DSN" in os.environ:
+    sentry_sdk.init(
+        dsn=os.environ["SENTRY_DSN"],
+    )
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")

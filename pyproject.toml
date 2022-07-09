@@ -12,6 +12,7 @@ httpx = "^0.23.0"
 aioredis = "^2.0.1"
 fastapi = "^0.78.0"
 Jinja2 = "^3.1.2"
+sentry-sdk = "^1.6.0"
 
 [tool.poetry.dev-dependencies]
 
