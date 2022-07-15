@@ -54,11 +54,17 @@ headers = {
 async def get_data(request: Request, post_id: str) -> Optional[dict]:
     r = request.app.state.redis
     client = app.state.client
-    post_url = f"https://instagram.com/p/{post_id}"
-    data = await r.get(post_id)
-    if data is None:
+
+    async def get_media_id(post_id):
+        post_url = f"https://instagram.com/p/{post_id}"
         post_text = (await client.get(post_url)).text
         media_id = re.search(r'"media_id":"(\d+)"', post_text).group(1)
+        await r.set(f"{post_id}_media_id", media_id)
+        return media_id
+
+    data = await r.get(post_id)
+    if data is None:
+        media_id = await r.get(f"{post_id}_media_id") or await get_media_id(post_id)
         api_resp = await client.get(
             f"https://i.instagram.com/api/v1/media/{media_id}/info/",
         )
@@ -84,7 +90,6 @@ async def close_redis():
     await app.state.client.aclose()
 
 
-
 @app.get("/", response_class=HTMLResponse)
 def root():
     with open("templates/home.html") as f:
@@ -98,8 +103,8 @@ def root():
 @app.get("/tv/{post_id}", response_class=HTMLResponse)
 async def read_item(request: Request, post_id: str, num: Optional[int] = 1):
     post_url = f"https://instagram.com/p/{post_id}"
-    if request.headers.get("User-Agent") not in CRAWLER_UA:
-        return RedirectResponse(post_url, status_code=302)
+    # if request.headers.get("User-Agent") not in CRAWLER_UA:
+    #     return RedirectResponse(post_url, status_code=302)
 
     data = await get_data(request, post_id)
     item = data["items"][0]
