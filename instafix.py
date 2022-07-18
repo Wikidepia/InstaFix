@@ -103,8 +103,8 @@ def root():
 @app.get("/tv/{post_id}", response_class=HTMLResponse)
 async def read_item(request: Request, post_id: str, num: Optional[int] = 1):
     post_url = f"https://instagram.com/p/{post_id}"
-    # if request.headers.get("User-Agent") not in CRAWLER_UA:
-    #     return RedirectResponse(post_url, status_code=302)
+    if request.headers.get("User-Agent") not in CRAWLER_UA:
+        return RedirectResponse(post_url, status_code=302)
 
     data = await get_data(request, post_id)
     item = data["items"][0]
