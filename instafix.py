@@ -1,13 +1,15 @@
+import asyncio
 import json
 import os
 import re
 from http.cookiejar import MozillaCookieJar
-from typing import Optional
+from typing import Optional, Union
 
 import aioredis
 import httpx
+import pyvips
 import sentry_sdk
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
@@ -101,7 +103,7 @@ def root():
 @app.get("/p/{post_id}/{num}", response_class=HTMLResponse)
 @app.get("/reel/{post_id}", response_class=HTMLResponse)
 @app.get("/tv/{post_id}", response_class=HTMLResponse)
-async def read_item(request: Request, post_id: str, num: Optional[int] = 1):
+async def read_item(request: Request, post_id: str, num: Optional[Union[int, str]] = 1):
     post_url = f"https://instagram.com/p/{post_id}"
     if request.headers.get("User-Agent") not in CRAWLER_UA:
         return RedirectResponse(post_url, status_code=302)
@@ -110,7 +112,8 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = 1):
     item = data["items"][0]
 
     media_lst = item["carousel_media"] if "carousel_media" in item else [item]
-    media = media_lst[num - 1]
+    if num != "all":
+        media = media_lst[num - 1]
 
     description = item["caption"]["text"] if item["caption"] != None else ""
     full_name = item["user"]["full_name"]
@@ -126,19 +129,21 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = 1):
         "media_total": len(media_lst),
     }
 
-    if "video_versions" in media:
+    if num == "all":
+        ctx["image"] = f"/grid/{post_id}"
+        ctx["card"] = "summary_large_image"
+    elif "video_versions" in media:
         video = media["video_versions"][-1]
         ctx["video"] = f"/videos/{post_id}/{num}"
         ctx["width"] = video["width"]
         ctx["height"] = video["height"]
         ctx["card"] = "player"
-    else:
+    elif "image_versions2" in media:
         image = media["image_versions2"]["candidates"][0]
         ctx["image"] = f"/images/{post_id}/{num}"
         ctx["width"] = image["width"]
         ctx["height"] = image["height"]
         ctx["card"] = "summary_large_image"
-
     return templates.TemplateResponse("base.html", ctx)
 
 
@@ -162,3 +167,28 @@ async def images(request: Request, post_id: str, num: int):
     media = media_lst[num - 1]
     image_url = media["image_versions2"]["candidates"][0]["url"]
     return RedirectResponse(image_url, status_code=302)
+
+
+@app.get("/grid/{post_id}")
+async def grid(request: Request, post_id: str):
+    client = request.app.state.client
+
+    async def download_image(url):
+        resp = await client.get(url)
+        return resp.content
+
+    data = await get_data(request, post_id)
+    item = data["items"][0]
+
+    media_lst = item["carousel_media"] if "carousel_media" in item else [item]
+    media_urls = [
+        m["image_versions2"]["candidates"][0]["url"]
+        for m in media_lst
+        if "image_versions2" in m
+    ]
+
+    media_imgs = await asyncio.gather(*[download_image(url) for url in media_urls])
+    media_imgs = [pyvips.Image.new_from_buffer(img, "") for img in media_imgs]
+    grid_img = pyvips.Image.arrayjoin(media_imgs, across=2, shim=5)
+    grid_buffer = grid_img.write_to_buffer(".jpg", Q=75)
+    return Response(grid_buffer)
