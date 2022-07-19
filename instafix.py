@@ -82,7 +82,7 @@ async def create_redis():
         "redis://localhost:6379", encoding="utf-8", decode_responses=True
     )
     app.state.client = httpx.AsyncClient(
-        headers=headers, cookies=cookies, follow_redirects=True, timeout=15.0
+        headers=headers, cookies=cookies, follow_redirects=True, timeout=60.0
     )
 
 
