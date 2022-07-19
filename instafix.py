@@ -191,4 +191,4 @@ async def grid(request: Request, post_id: str):
     media_imgs = [pyvips.Image.new_from_buffer(img, "") for img in media_imgs]
     grid_img = pyvips.Image.arrayjoin(media_imgs, across=2, shim=5)
     grid_buffer = grid_img.write_to_buffer(".jpg", Q=75)
-    return Response(grid_buffer)
+    return Response(grid_buffer, headers={"Content-Type": "image/jpeg"})
