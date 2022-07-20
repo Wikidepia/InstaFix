@@ -288,7 +288,7 @@ idna2008 = ["idna"]
 
 [[package]]
 name = "sentry-sdk"
-version = "1.6.0"
+version = "1.7.2"
 description = "Python client for Sentry (https://sentry.io)"
 category = "main"
 optional = false
