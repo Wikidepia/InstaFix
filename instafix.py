@@ -113,6 +113,7 @@ async def read_item(request: Request, post_id: str, num: Optional[Union[int, str
 
     media_lst = item["carousel_media"] if "carousel_media" in item else [item]
     if num != "all":
+        num = int(num)
         media = media_lst[num - 1]
 
     description = item["caption"]["text"] if item["caption"] != None else ""
