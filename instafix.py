@@ -17,6 +17,7 @@ if "SENTRY_DSN" in os.environ:
     sentry_sdk.init(
         dsn=os.environ["SENTRY_DSN"],
     )
+    print("Sentry initialized.")
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
@@ -59,10 +60,14 @@ async def get_data(request: Request, post_id: str) -> Optional[dict]:
 
     async def get_media_id(post_id):
         post_url = f"https://instagram.com/p/{post_id}"
-        post_text = (await client.get(post_url)).text
-        media_id = re.search(r'"media_id":"(\d+)"', post_text).group(1)
-        await r.set(f"{post_id}_media_id", media_id)
-        return media_id
+        for _ in range(3):
+            try:
+                post_text = (await client.get(post_url)).text
+                media_id = re.search(r'"media_id":"(\d+)"', post_text).group(1)
+                await r.set(f"{post_id}_media_id", media_id)
+                return media_id
+            except Exception as e:
+                raise e
 
     data = await r.get(post_id)
     if data is None:
