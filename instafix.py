@@ -12,6 +12,10 @@ import sentry_sdk
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+import gc
+
+pyvips.cache_set_max(0)
+pyvips.leak_set(True)
 
 if "SENTRY_DSN" in os.environ:
     sentry_sdk.init(
@@ -177,7 +181,6 @@ async def images(request: Request, post_id: str, num: int):
 
 @app.get("/grid/{post_id}")
 async def grid(request: Request, post_id: str):
-    return RedirectResponse("/")
     client = request.app.state.client
 
     async def download_image(url):
@@ -199,5 +202,7 @@ async def grid(request: Request, post_id: str):
         pyvips.Image.new_from_buffer(img, "", access="sequential") for img in media_imgs
     ]
     grid_img = pyvips.Image.arrayjoin(media_vips, across=2, shim=5)
-    grid_buffer = grid_img.write_to_buffer(".jpg", Q=75)
+    grid_buffer = grid_img.write_to_buffer("jpeg")
+    gc.collect()
+    del grid_img
     return Response(grid_buffer, headers={"Content-Type": "image/jpeg"})
