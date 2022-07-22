@@ -13,6 +13,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
+pyvips.cache_set_max(0)
 if "SENTRY_DSN" in os.environ:
     sentry_sdk.init(
         dsn=os.environ["SENTRY_DSN"],
@@ -177,7 +178,6 @@ async def images(request: Request, post_id: str, num: int):
 
 @app.get("/grid/{post_id}")
 async def grid(request: Request, post_id: str):
-    return RedirectResponse("/")
     client = request.app.state.client
 
     async def download_image(url):
