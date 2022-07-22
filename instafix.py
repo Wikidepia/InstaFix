@@ -54,25 +54,22 @@ headers = {
     "x-ig-app-id": "1217981644879628",
 }
 
+# Thanks to @gerbz! https://stackoverflow.com/a/37246231
+def shortcode_to_mediaid(shortcode):
+    alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+    mediaid = 0
+    for letter in shortcode:
+        mediaid = (mediaid * 64) + alphabet.index(letter)
+    return mediaid
+
 
 async def get_data(request: Request, post_id: str) -> Optional[dict]:
     r = request.app.state.redis
     client = app.state.client
 
-    async def get_media_id(post_id):
-        post_url = f"https://instagram.com/p/{post_id}"
-        for _ in range(3):
-            try:
-                post_text = (await client.get(post_url)).text
-                media_id = re.search(r'"media_id":"(\d+)"', post_text).group(1)
-                await r.set(f"{post_id}_media_id", media_id)
-                return media_id
-            except Exception as e:
-                raise e
-
     data = await r.get(post_id)
     if data is None:
-        media_id = await r.get(f"{post_id}_media_id") or await get_media_id(post_id)
+        media_id = shortcode_to_mediaid(post_id)
         api_resp = await client.get(
             f"https://i.instagram.com/api/v1/media/{media_id}/info/",
         )
