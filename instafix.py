@@ -1,4 +1,5 @@
 import asyncio
+import gc
 import json
 import os
 import re
@@ -7,12 +8,12 @@ from typing import Optional, Union
 
 import aioredis
 import httpx
+import psutil
 import pyvips
 import sentry_sdk
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-import gc
 
 pyvips.cache_set_max(0)
 pyvips.leak_set(True)
@@ -196,13 +197,17 @@ async def grid(request: Request, post_id: str):
         for m in media_lst
         if "image_versions2" in m
     ]
-
+    process = psutil.Process(os.getpid())
+    rss_bytes = (process.memory_info().rss)
+    rss_mb = rss_bytes / 1024 / 1024
+    print("Before:", rss_mb)
     media_imgs = await asyncio.gather(*[download_image(url) for url in media_urls])
     media_vips = [
         pyvips.Image.new_from_buffer(img, "", access="sequential") for img in media_imgs
     ]
     grid_img = pyvips.Image.arrayjoin(media_vips, across=2, shim=5)
     grid_buffer = grid_img.write_to_buffer(".jpg", Q=75)
-    gc.collect()
-    del grid_img
+    rss_bytes = (process.memory_info().rss)
+    rss_mb = rss_bytes / 1024 / 1024
+    print("After:", rss_mb)
     return Response(grid_buffer, headers={"Content-Type": "image/jpeg"})
