@@ -1,9 +1,9 @@
 import asyncio
 import json
 import os
-import re
 from http.cookiejar import MozillaCookieJar
 from typing import Optional, Union
+from urllib.parse import urlparse
 
 import aioredis
 import httpx
@@ -159,6 +159,11 @@ async def videos(request: Request, post_id: str, num: int):
     media_lst = item["carousel_media"] if "carousel_media" in item else [item]
     media = media_lst[num - 1]
     video_url = media["video_versions"][0]["url"]
+
+    # Replace netloc to global CDN
+    parsed = urlparse(video_url)
+    replaced = parsed._replace(netloc="scontent.cdninstagram.com")
+    video_url = replaced.geturl()
     return RedirectResponse(video_url, status_code=302)
 
 
@@ -170,6 +175,11 @@ async def images(request: Request, post_id: str, num: int):
     media_lst = item["carousel_media"] if "carousel_media" in item else [item]
     media = media_lst[num - 1]
     image_url = media["image_versions2"]["candidates"][0]["url"]
+
+    # Replace netloc to global CDN
+    parsed = urlparse(image_url)
+    replaced = parsed._replace(netloc="scontent.cdninstagram.com")
+    image_url = replaced.geturl()
     return RedirectResponse(image_url, status_code=302)
 
 
