@@ -195,16 +195,18 @@ async def grid(request: Request, post_id: str):
     item = data["items"][0]
 
     media_lst = item["carousel_media"] if "carousel_media" in item else [item]
+    # Limit to 4 images, Discord only show 4 images originally
     media_urls = [
         m["image_versions2"]["candidates"][0]["url"]
         for m in media_lst
-        if "image_versions2" in m
-    ]
+        if "image_versions2" in m and "video_versions" not in m
+    ][:4]
 
     media_imgs = await asyncio.gather(*[download_image(url) for url in media_urls])
     media_vips = [
         pyvips.Image.new_from_buffer(img, "", access="sequential") for img in media_imgs
     ]
-    grid_img = pyvips.Image.arrayjoin(media_vips, across=2, shim=5)
-    grid_buffer = grid_img.write_to_buffer(".jpg", Q=75)
+    accross = min(len(media_imgs), 3 if len(media_imgs) % 3 == 0 else 2)
+    grid_img = pyvips.Image.arrayjoin(media_vips, across=accross, shim=10)
+    grid_buffer = grid_img.write_to_buffer(".jpg", optimize_coding=True)
     return Response(grid_buffer, headers={"Content-Type": "image/jpeg"})
