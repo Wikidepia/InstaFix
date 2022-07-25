@@ -106,7 +106,7 @@ def root():
 @app.get("/p/{post_id}/{num}", response_class=HTMLResponse)
 @app.get("/reel/{post_id}", response_class=HTMLResponse)
 @app.get("/tv/{post_id}", response_class=HTMLResponse)
-async def read_item(request: Request, post_id: str, num: Optional[int] = 1):
+async def read_item(request: Request, post_id: str, num: Optional[int] = None):
     post_url = f"https://instagram.com/p/{post_id}"
     if request.headers.get("User-Agent") not in CRAWLER_UA:
         return RedirectResponse(post_url, status_code=302)
@@ -115,7 +115,10 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = 1):
     item = data["items"][0]
 
     media_lst = item["carousel_media"] if "carousel_media" in item else [item]
-    media = media_lst[num - 1]
+    if num is None:
+        media = media_lst[0] 
+    else:
+        media = media_lst[num - 1]
 
     description = item["caption"]["text"] if item["caption"] != None else ""
     full_name = item["user"]["full_name"]
@@ -129,7 +132,7 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = 1):
         "username": username,
     }
 
-    if num == 1 and "image_versions2" in media:
+    if num == None and "video_versions" not in media:
         ctx["image"] = f"/grid/{post_id}"
         ctx["card"] = "summary_large_image"
     elif "video_versions" in media:
