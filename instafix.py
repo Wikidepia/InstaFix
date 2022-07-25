@@ -136,12 +136,14 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
         ctx["image"] = f"/grid/{post_id}"
         ctx["card"] = "summary_large_image"
     elif "video_versions" in media:
+        num = 1 if num is None else num
         video = media["video_versions"][-1]
         ctx["video"] = f"/videos/{post_id}/{num}"
         ctx["width"] = video["width"]
         ctx["height"] = video["height"]
         ctx["card"] = "player"
     elif "image_versions2" in media:
+        num = 1 if num is None else num
         image = media["image_versions2"]["candidates"][0]
         ctx["image"] = f"/images/{post_id}/{num}"
         ctx["width"] = image["width"]
