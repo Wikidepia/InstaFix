@@ -2,7 +2,7 @@ import asyncio
 import json
 import os
 from http.cookiejar import MozillaCookieJar
-from typing import Optional, Union
+from typing import Optional
 from urllib.parse import urlparse
 
 import aioredis
@@ -80,7 +80,7 @@ async def get_data(request: Request, post_id: str) -> Optional[dict]:
 
 
 @app.on_event("startup")
-async def create_redis():
+async def startup():
     app.state.redis = await aioredis.from_url(
         "redis://localhost:6379", encoding="utf-8", decode_responses=True
     )
@@ -90,7 +90,7 @@ async def create_redis():
 
 
 @app.on_event("shutdown")
-async def close_redis():
+async def shutdown():
     await app.state.redis.close()
     await app.state.client.aclose()
 
@@ -106,7 +106,7 @@ def root():
 @app.get("/p/{post_id}/{num}", response_class=HTMLResponse)
 @app.get("/reel/{post_id}", response_class=HTMLResponse)
 @app.get("/tv/{post_id}", response_class=HTMLResponse)
-async def read_item(request: Request, post_id: str, num: Optional[Union[int, str]] = 1):
+async def read_item(request: Request, post_id: str, num: Optional[int] = 1):
     post_url = f"https://instagram.com/p/{post_id}"
     if request.headers.get("User-Agent") not in CRAWLER_UA:
         return RedirectResponse(post_url, status_code=302)
@@ -115,9 +115,7 @@ async def read_item(request: Request, post_id: str, num: Optional[Union[int, str
     item = data["items"][0]
 
     media_lst = item["carousel_media"] if "carousel_media" in item else [item]
-    if num != "all":
-        num = int(num)
-        media = media_lst[num - 1]
+    media = media_lst[num - 1]
 
     description = item["caption"]["text"] if item["caption"] != None else ""
     full_name = item["user"]["full_name"]
@@ -129,11 +127,9 @@ async def read_item(request: Request, post_id: str, num: Optional[Union[int, str
         "description": description,
         "full_name": full_name,
         "username": username,
-        "media_num": num,
-        "media_total": len(media_lst),
     }
 
-    if num == "all":
+    if num == 1 and "image_versions2" in media:
         ctx["image"] = f"/grid/{post_id}"
         ctx["card"] = "summary_large_image"
     elif "video_versions" in media:
