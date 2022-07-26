@@ -115,10 +115,7 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
     item = data["items"][0]
 
     media_lst = item["carousel_media"] if "carousel_media" in item else [item]
-    if num is None:
-        media = media_lst[0] 
-    else:
-        media = media_lst[num - 1]
+    media = media_lst[num - 1] if num else media_lst[0]
 
     description = item["caption"]["text"] if item["caption"] != None else ""
     full_name = item["user"]["full_name"]
@@ -132,18 +129,18 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
         "username": username,
     }
 
-    if num == None and "video_versions" not in media:
+    if num is None and "video_versions" not in media:
         ctx["image"] = f"/grid/{post_id}"
         ctx["card"] = "summary_large_image"
     elif "video_versions" in media:
-        num = 1 if num is None else num
+        num = num if num else 1
         video = media["video_versions"][-1]
         ctx["video"] = f"/videos/{post_id}/{num}"
         ctx["width"] = video["width"]
         ctx["height"] = video["height"]
         ctx["card"] = "player"
     elif "image_versions2" in media:
-        num = 1 if num is None else num
+        num = num if num else 1
         image = media["image_versions2"]["candidates"][0]
         ctx["image"] = f"/images/{post_id}/{num}"
         ctx["width"] = image["width"]
