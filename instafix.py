@@ -13,7 +13,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-pyvips.cache_set_max(0)
+pyvips.cache_set_max(10)
 if "SENTRY_DSN" in os.environ:
     sentry_sdk.init(
         dsn=os.environ["SENTRY_DSN"],
@@ -134,7 +134,7 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
         ctx["card"] = "summary_large_image"
     elif "video_versions" in media:
         num = num if num else 1
-        video = media["video_versions"][-1]
+        video = media["video_versions"][0]
         ctx["video"] = f"/videos/{post_id}/{num}"
         ctx["width"] = video["width"]
         ctx["height"] = video["height"]
