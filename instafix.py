@@ -70,10 +70,13 @@ async def get_data(request: Request, post_id: str) -> Optional[dict]:
     data = await r.get(post_id)
     if data is None:
         media_id = shortcode_to_mediaid(post_id)
-        api_resp = await client.get(
-            f"https://i.instagram.com/api/v1/media/{media_id}/info/",
-        )
-        data = api_resp.text
+        for _ in range(3):
+            api_resp = await client.get(
+                f"https://i.instagram.com/api/v1/media/{media_id}/info/",
+            )
+            data = api_resp.text
+            if data != "":
+                break
         await r.set(post_id, data, ex=12 * 3600)
     data = json.loads(data)
     return data
