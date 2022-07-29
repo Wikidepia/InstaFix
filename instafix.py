@@ -13,7 +13,9 @@ from fastapi import FastAPI, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-pyvips.cache_set_max(10)
+pyvips.cache_set_max(0)
+pyvips.cache_set_max_mem(0)
+pyvips.cache_set_max_files(0)
 if "SENTRY_DSN" in os.environ:
     sentry_sdk.init(
         dsn=os.environ["SENTRY_DSN"],
