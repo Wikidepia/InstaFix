@@ -70,7 +70,8 @@ async def get_data(request: Request, post_id: str) -> Optional[dict]:
     client = app.state.client
 
     data = await r.get(post_id)
-    if data is None:
+    missed = data is None
+    if missed:
         media_id = shortcode_to_mediaid(post_id)
         for _ in range(3):
             api_resp = await client.get(
@@ -79,12 +80,13 @@ async def get_data(request: Request, post_id: str) -> Optional[dict]:
             data = api_resp.text
             if data != "":
                 break
-        await r.set(post_id, data, ex=24 * 3600)
-    data = json.loads(data)
+            asyncio.sleep(0.1)
+    data_dict = json.loads(data)
+    await r.set(post_id, data, ex=24 * 3600) if missed else None
     if data.get("status") == "fail":
         message = data.get("message")
         raise Exception(message)
-    return data
+    return data_dict
 
 
 @app.on_event("startup")
