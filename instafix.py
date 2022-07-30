@@ -81,6 +81,9 @@ async def get_data(request: Request, post_id: str) -> Optional[dict]:
                 break
         await r.set(post_id, data, ex=24 * 3600)
     data = json.loads(data)
+    if data.get("status") == "fail":
+        message = data.get("message")
+        raise Exception(message)
     return data
 
 
