@@ -79,7 +79,7 @@ async def get_data(request: Request, post_id: str) -> Optional[dict]:
             data = api_resp.text
             if data != "":
                 break
-        await r.set(post_id, data, ex=12 * 3600)
+        await r.set(post_id, data, ex=24 * 3600)
     data = json.loads(data)
     return data
 
