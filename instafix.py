@@ -80,7 +80,7 @@ async def get_data(request: Request, post_id: str) -> Optional[dict]:
             data = api_resp.text
             if data != "":
                 break
-            asyncio.sleep(0.1)
+            await asyncio.sleep(0.1)
     data_dict = json.loads(data)
     await r.set(post_id, data, ex=24 * 3600) if missed else None
     if data.get("status") == "fail":
