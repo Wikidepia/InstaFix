@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import re
 from http.cookiejar import MozillaCookieJar
 from typing import Optional
 from urllib.parse import urlparse
@@ -27,22 +28,6 @@ templates = Jinja2Templates(directory="templates")
 
 cookies = MozillaCookieJar("cookies.txt")
 cookies.load()
-
-CRAWLER_UA = {
-    "facebookcatalog/1.0",
-    "facebookexternalhit/1.1",
-    "TelegramBot (like TwitterBot)",
-    "Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)",
-    "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)",
-    "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
-    "Mozilla/5.0 (compatible; January/1.0; +https://gitlab.insrt.uk/revolt/january)",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 11.6; rv:92.0) Gecko/20100101 Firefox/92.0",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:38.0) Gecko/20100101 Firefox/38.0",
-    "Mozilla/5.0 (Windows; U; Windows NT 10.0; en-US; Valve Steam Client/default/0; ) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.117 Safari/537.36",
-    "Mozilla/5.0 (Windows; U; Windows NT 10.0; en-US; Valve Steam Client/default/1596241936; ) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.117 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_1) AppleWebKit/601.2.4 (KHTML, like Gecko) Version/9.0.1 Safari/601.2.4 facebookexternalhit/1.1 Facebot Twitterbot/1.0",
-}
-
 
 headers = {
     "accept": "*/*",
@@ -118,8 +103,11 @@ def root():
 @app.get("/tv/{post_id}", response_class=HTMLResponse)
 async def read_item(request: Request, post_id: str, num: Optional[int] = None):
     post_url = f"https://instagram.com/p/{post_id}"
-    if request.headers.get("User-Agent") not in CRAWLER_UA:
-        return RedirectResponse(post_url, status_code=302)
+    if not re.search(
+        r"bot|facebook|embed|got|firefox\/92|curl|wget",
+        request.headers.get("User-Agent", "").lower(),
+    ):
+        return RedirectResponse(post_url)
 
     data = await get_data(request, post_id)
     item = data["items"][0]
