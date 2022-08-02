@@ -67,10 +67,10 @@ async def get_data(request: Request, post_id: str) -> Optional[dict]:
                 break
             await asyncio.sleep(0.1)
     data_dict = json.loads(data)
-    await r.set(post_id, data, ex=24 * 3600) if missed else None
     if data_dict.get("status") == "fail":
         message = data_dict.get("message")
         raise Exception(message)
+    await r.set(post_id, data, ex=24 * 3600) if missed else None
     return data_dict
 
 
