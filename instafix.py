@@ -10,13 +10,14 @@ import aioredis
 import httpx
 import pyvips
 import sentry_sdk
-from fastapi import FastAPI, Request, Response
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 pyvips.cache_set_max(0)
 pyvips.cache_set_max_mem(0)
 pyvips.cache_set_max_files(0)
+os.makedirs("static", exist_ok=True)
 if "SENTRY_DSN" in os.environ:
     sentry_sdk.init(
         dsn=os.environ["SENTRY_DSN"],
@@ -182,6 +183,11 @@ async def images(request: Request, post_id: str, num: int):
 @app.get("/grid/{post_id}")
 async def grid(request: Request, post_id: str):
     client = request.app.state.client
+    if os.path.exists(f"static/grid:{post_id}.jpg"):
+        return FileResponse(
+            f"static/grid:{post_id}.jpg",
+            headers={"Cache-Control": "public, max-age=31536000"},
+        )
 
     async def download_image(url):
         resp = await client.get(url)
@@ -204,5 +210,8 @@ async def grid(request: Request, post_id: str):
     ]
     accross = min(len(media_imgs), 3 if len(media_imgs) % 3 == 0 else 2)
     grid_img = pyvips.Image.arrayjoin(media_vips, across=accross, shim=10)
-    grid_buffer = grid_img.write_to_buffer(".jpg", optimize_coding=True)
-    return Response(grid_buffer, headers={"Content-Type": "image/jpeg"})
+    grid_img.write_to_file(f"static/grid:{post_id}.jpg")
+    return FileResponse(
+        f"static/grid:{post_id}.jpg",
+        headers={"Cache-Control": "public, max-age=31536000"},
+    )
