@@ -208,7 +208,7 @@ async def grid(request: Request, post_id: str):
     media_vips = [
         pyvips.Image.new_from_buffer(img, "", access="sequential") for img in media_imgs
     ]
-    accross = min(len(media_imgs), 3 if len(media_imgs) % 3 == 0 else 2)
+    accross = min(len(media_imgs), 2)
     grid_img = pyvips.Image.arrayjoin(media_vips, across=accross, shim=10)
     grid_img.write_to_file(f"static/grid:{post_id}.jpg")
     return FileResponse(
