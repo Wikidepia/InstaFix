@@ -70,7 +70,7 @@ async def get_data(request: Request, post_id: str) -> Optional[dict]:
             await asyncio.sleep(0.1)
     data_dict = json.loads(data)
     message = data_dict.get("message")
-    if all(x not in message for x in SAFE_ERROR):
+    if message is not None and all(x not in message for x in SAFE_ERROR):
         raise Exception(message)
     if missed:
         await r.set(post_id, data, ex=24 * 3600)
@@ -83,7 +83,7 @@ async def startup():
         "redis://localhost:6379", encoding="utf-8", decode_responses=True
     )
     app.state.client = httpx.AsyncClient(
-        headers=headers, cookies=cookies, follow_redirects=True, timeout=60.0
+        headers=headers, cookies=cookies, timeout=60.0
     )
 
 
