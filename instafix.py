@@ -71,7 +71,8 @@ async def get_data(request: Request, post_id: str) -> Optional[dict]:
     if data_dict.get("status") == "fail":
         message = data_dict.get("message")
         raise Exception(message)
-    await r.set(post_id, data, ex=24 * 3600) if missed else None
+    if missed:
+        await r.set(post_id, data, ex=24 * 3600)
     return data_dict
 
 
@@ -81,7 +82,7 @@ async def startup():
         "redis://localhost:6379", encoding="utf-8", decode_responses=True
     )
     app.state.client = httpx.AsyncClient(
-        headers=headers, cookies=cookies, http2=True, timeout=60.0
+        headers=headers, cookies=cookies, follow_redirects=True, timeout=60.0
     )
 
 
@@ -157,11 +158,15 @@ async def videos(request: Request, post_id: str, num: int):
     media = media_lst[num - 1]
     video_url = media["video_versions"][0]["url"]
 
-    # Replace netloc to global CDN
-    parsed = urlparse(video_url)
-    replaced = parsed._replace(netloc="scontent.cdninstagram.com")
-    video_url = replaced.geturl()
-    return RedirectResponse(video_url, status_code=302)
+    client = request.app.state.client
+    with open(f"static/videos:{post_id}:{num}.mp4", "wb") as f:
+        f.write(await client.get(video_url).content)
+
+    return FileResponse(
+        f"static/videos:{post_id}:{num}.mp4",
+        media_type="video/mp4",
+        headers={"Cache-Control": "public, max-age=31536000"},
+    )
 
 
 @app.get("/images/{post_id}/{num}")
@@ -173,11 +178,15 @@ async def images(request: Request, post_id: str, num: int):
     media = media_lst[num - 1]
     image_url = media["image_versions2"]["candidates"][0]["url"]
 
-    # Replace netloc to global CDN
-    parsed = urlparse(image_url)
-    replaced = parsed._replace(netloc="scontent.cdninstagram.com")
-    image_url = replaced.geturl()
-    return RedirectResponse(image_url, status_code=302)
+    client = request.app.state.client
+    with open(f"static/images:{post_id}:{num}.jpg", "wb") as f:
+        f.write(await client.get(image_url).content)
+
+    return FileResponse(
+        f"static/images:{post_id}:{num}.jpg",
+        media_type="image/jpeg",
+        headers={"Cache-Control": "public, max-age=31536000"},
+    )
 
 
 @app.get("/grid/{post_id}")
