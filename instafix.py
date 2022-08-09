@@ -160,7 +160,7 @@ async def videos(request: Request, post_id: str, num: int):
 
     client = request.app.state.client
     with open(f"static/videos:{post_id}:{num}.mp4", "wb") as f:
-        f.write(await client.get(video_url).content)
+        f.write((await client.get(video_url)).content)
 
     return FileResponse(
         f"static/videos:{post_id}:{num}.mp4",
@@ -180,7 +180,7 @@ async def images(request: Request, post_id: str, num: int):
 
     client = request.app.state.client
     with open(f"static/images:{post_id}:{num}.jpg", "wb") as f:
-        f.write(await client.get(image_url).content)
+        f.write((await client.get(image_url)).content)
 
     return FileResponse(
         f"static/images:{post_id}:{num}.jpg",
@@ -195,6 +195,7 @@ async def grid(request: Request, post_id: str):
     if os.path.exists(f"static/grid:{post_id}.jpg"):
         return FileResponse(
             f"static/grid:{post_id}.jpg",
+            media_type="image/jpeg",
             headers={"Cache-Control": "public, max-age=31536000"},
         )
 
@@ -222,5 +223,6 @@ async def grid(request: Request, post_id: str):
     grid_img.write_to_file(f"static/grid:{post_id}.jpg")
     return FileResponse(
         f"static/grid:{post_id}.jpg",
+        media_type="image/jpeg",
         headers={"Cache-Control": "public, max-age=31536000"},
     )
