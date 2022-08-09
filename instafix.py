@@ -4,7 +4,6 @@ import os
 import re
 from http.cookiejar import MozillaCookieJar
 from typing import Optional
-from urllib.parse import urlparse
 
 import aioredis
 import httpx
@@ -13,6 +12,8 @@ import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+
+SAFE_ERROR = ["Media not found", "Invalid media_id"]
 
 pyvips.cache_set_max(0)
 pyvips.cache_set_max_mem(0)
@@ -68,8 +69,8 @@ async def get_data(request: Request, post_id: str) -> Optional[dict]:
                 break
             await asyncio.sleep(0.1)
     data_dict = json.loads(data)
-    if data_dict.get("status") == "fail":
-        message = data_dict.get("message")
+    message = data_dict.get("message")
+    if all(x not in message for x in SAFE_ERROR):
         raise Exception(message)
     if missed:
         await r.set(post_id, data, ex=24 * 3600)
