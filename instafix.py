@@ -113,6 +113,8 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
         return RedirectResponse(post_url)
 
     data = await get_data(request, post_id)
+    if "items" not in data:
+        return
     item = data["items"][0]
 
     media_lst = item["carousel_media"] if "carousel_media" in item else [item]
@@ -152,6 +154,13 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
 
 @app.get("/videos/{post_id}/{num}")
 async def videos(request: Request, post_id: str, num: int):
+    if os.path.exists(f"static/videos:{post_id}:{num}.mp4"):
+        return FileResponse(
+            f"static/videos:{post_id}:{num}.mp4",
+            media_type="video/mp4",
+            headers={"Cache-Control": "public, max-age=31536000"},
+        )
+
     data = await get_data(request, post_id)
     item = data["items"][0]
 
@@ -172,6 +181,13 @@ async def videos(request: Request, post_id: str, num: int):
 
 @app.get("/images/{post_id}/{num}")
 async def images(request: Request, post_id: str, num: int):
+    if os.path.exists(f"static/images:{post_id}:{num}.jpg"):
+        return FileResponse(
+            f"static/images:{post_id}:{num}.jpg",
+            media_type="image/jpeg",
+            headers={"Cache-Control": "public, max-age=31536000"},
+        )
+
     data = await get_data(request, post_id)
     item = data["items"][0]
 
