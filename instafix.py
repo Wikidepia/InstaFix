@@ -162,6 +162,8 @@ async def videos(request: Request, post_id: str, num: int):
         )
 
     data = await get_data(request, post_id)
+    if "items" not in data:
+        return
     item = data["items"][0]
 
     media_lst = item["carousel_media"] if "carousel_media" in item else [item]
@@ -189,6 +191,8 @@ async def images(request: Request, post_id: str, num: int):
         )
 
     data = await get_data(request, post_id)
+    if "items" not in data:
+        return
     item = data["items"][0]
 
     media_lst = item["carousel_media"] if "carousel_media" in item else [item]
@@ -221,6 +225,8 @@ async def grid(request: Request, post_id: str):
         return resp.content
 
     data = await get_data(request, post_id)
+    if "items" not in data:
+        return
     item = data["items"][0]
 
     media_lst = item["carousel_media"] if "carousel_media" in item else [item]
