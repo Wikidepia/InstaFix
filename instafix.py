@@ -70,9 +70,9 @@ async def get_data(request: Request, post_id: str) -> Optional[dict]:
             await asyncio.sleep(0.1)
     data_dict = json.loads(data)
     message = data_dict.get("message")
-    if message is not None and all(x not in message for x in SAFE_ERROR):
+    if message and all(x not in message for x in SAFE_ERROR):
         raise Exception(message)
-    if missed:
+    if missed and not message:
         await r.set(post_id, data, ex=24 * 3600)
     return data_dict
 
@@ -120,7 +120,7 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
     media_lst = item["carousel_media"] if "carousel_media" in item else [item]
     media = media_lst[num - 1] if num else media_lst[0]
 
-    description = item["caption"]["text"] if item["caption"] != None else ""
+    description = item["caption"]["text"] if item["caption"] else ""
     full_name = item["user"]["full_name"]
     username = item["user"]["username"]
 
@@ -154,13 +154,6 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
 
 @app.get("/videos/{post_id}/{num}")
 async def videos(request: Request, post_id: str, num: int):
-    if os.path.exists(f"static/videos:{post_id}:{num}.mp4"):
-        return FileResponse(
-            f"static/videos:{post_id}:{num}.mp4",
-            media_type="video/mp4",
-            headers={"Cache-Control": "public, max-age=31536000"},
-        )
-
     data = await get_data(request, post_id)
     if "items" not in data:
         return
@@ -169,27 +162,14 @@ async def videos(request: Request, post_id: str, num: int):
     media_lst = item["carousel_media"] if "carousel_media" in item else [item]
     media = media_lst[num - 1]
     video_url = media["video_versions"][0]["url"]
-
-    client = request.app.state.client
-    with open(f"static/videos:{post_id}:{num}.mp4", "wb") as f:
-        f.write((await client.get(video_url)).content)
-
-    return FileResponse(
-        f"static/videos:{post_id}:{num}.mp4",
-        media_type="video/mp4",
-        headers={"Cache-Control": "public, max-age=31536000"},
+    video_url = re.sub(
+        r"https:\/\/.*?\/v\/", "https://scontent.cdninstagram.com/v/", video_url
     )
+    return RedirectResponse(video_url)
 
 
 @app.get("/images/{post_id}/{num}")
 async def images(request: Request, post_id: str, num: int):
-    if os.path.exists(f"static/images:{post_id}:{num}.jpg"):
-        return FileResponse(
-            f"static/images:{post_id}:{num}.jpg",
-            media_type="image/jpeg",
-            headers={"Cache-Control": "public, max-age=31536000"},
-        )
-
     data = await get_data(request, post_id)
     if "items" not in data:
         return
@@ -198,16 +178,10 @@ async def images(request: Request, post_id: str, num: int):
     media_lst = item["carousel_media"] if "carousel_media" in item else [item]
     media = media_lst[num - 1]
     image_url = media["image_versions2"]["candidates"][0]["url"]
-
-    client = request.app.state.client
-    with open(f"static/images:{post_id}:{num}.jpg", "wb") as f:
-        f.write((await client.get(image_url)).content)
-
-    return FileResponse(
-        f"static/images:{post_id}:{num}.jpg",
-        media_type="image/jpeg",
-        headers={"Cache-Control": "public, max-age=31536000"},
+    image_url = re.sub(
+        r"https:\/\/.*?\/v\/", "https://scontent.cdninstagram.com/v/", image_url
     )
+    return RedirectResponse(image_url)
 
 
 @app.get("/grid/{post_id}")
@@ -237,6 +211,7 @@ async def grid(request: Request, post_id: str):
         if "image_versions2" in m and "video_versions" not in m
     ][:4]
 
+    # Download images and merge them into a single image
     media_imgs = await asyncio.gather(*[download_image(url) for url in media_urls])
     media_vips = [
         pyvips.Image.new_from_buffer(img, "", access="sequential") for img in media_imgs
@@ -244,6 +219,7 @@ async def grid(request: Request, post_id: str):
     accross = min(len(media_imgs), 2)
     grid_img = pyvips.Image.arrayjoin(media_vips, across=accross, shim=10)
     grid_img.write_to_file(f"static/grid:{post_id}.jpg")
+
     return FileResponse(
         f"static/grid:{post_id}.jpg",
         media_type="image/jpeg",
