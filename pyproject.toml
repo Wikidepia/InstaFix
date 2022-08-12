@@ -8,12 +8,12 @@ authors = ["Akmal <magchuz@pm.me>"]
 python = "^3.8"
 gunicorn = "^20.1.0"
 uvicorn = {extras = ["standard"], version = "^0.17.6"}
-httpx = {extras = ["http2"], version = "^0.23.0"}
 aioredis = "^2.0.1"
 fastapi = "^0.78.0"
 Jinja2 = "^3.1.2"
 sentry-sdk = "^1.6.0"
 pyvips = "^2.2.1"
+httpx = "^0.23.0"
 
 [tool.poetry.dev-dependencies]
 
