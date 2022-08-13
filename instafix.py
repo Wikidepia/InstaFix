@@ -70,9 +70,9 @@ async def get_data(request: Request, post_id: str) -> Optional[dict]:
             await asyncio.sleep(0.1)
     data_dict = json.loads(data)
     message = data_dict.get("message")
-    if message and all(x not in message for x in SAFE_ERROR):
+    if message and all(err not in message for err in SAFE_ERROR):
         raise Exception(message)
-    if missed and not message:
+    if missed and message is None:
         await r.set(post_id, data, ex=24 * 3600)
     return data_dict
 
