@@ -13,7 +13,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-SAFE_ERROR = ["Media not found", "Invalid media_id"]
+SAFE_ERROR = ["Media not found", "Invalid media_id", "geoblock_required"]
 
 pyvips.cache_set_max(0)
 pyvips.cache_set_max_mem(0)
