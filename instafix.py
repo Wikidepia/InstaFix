@@ -11,6 +11,7 @@ import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from selectolax.parser import HTMLParser
 
 pyvips.cache_set_max(0)
 pyvips.cache_set_max_mem(0)
@@ -26,16 +27,22 @@ app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
 headers = {
-    "accept": "*/*",
+    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
     "accept-language": "en-US,en;q=0.9",
-    "origin": "https://www.instagram.com",
-    "referer": "https://www.instagram.com/",
-    "sec-fetch-dest": "empty",
-    "sec-fetch-mode": "cors",
-    "sec-fetch-site": "same-site",
-    "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1",
-    "x-ig-app-id": "1217981644879628",
+    "cache-control": "max-age=0",
+    "sec-ch-prefers-color-scheme": "dark",
+    "sec-ch-ua": '" Not A;Brand";v="99", "Chromium";v="100"',
+    "sec-ch-ua-mobile": "?1",
+    "sec-ch-ua-platform": '"Android"',
+    "sec-fetch-dest": "document",
+    "sec-fetch-mode": "navigate",
+    "sec-fetch-site": "none",
+    "sec-fetch-user": "?1",
+    "upgrade-insecure-requests": "1",
+    "user-agent": "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.60 Mobile Safari/537.36",
+    "viewport-width": "1280",
 }
+
 
 async def get_data(request: Request, post_id: str) -> Optional[dict]:
     r = request.app.state.redis
@@ -48,11 +55,43 @@ async def get_data(request: Request, post_id: str) -> Optional[dict]:
                 f"https://www.instagram.com/p/{post_id}/embed/captioned",
             )
         ).text
+        with open("debug.html", "w") as f:
+            f.write(api_resp)
         await r.set(post_id, api_resp, ex=24 * 3600)
     data = re.findall(
         r"window\.__additionalDataLoaded\('extra',(.*)\);<\/script>", api_resp
     )
-    return json.loads(data[0])
+    data = json.loads(data[0])
+    if data is None:
+        data = parse_embed(api_resp)
+    return data
+
+
+def parse_embed(html: str) -> dict:
+    tree = HTMLParser(html)
+    typename = "GraphImage"
+    display_url = tree.css_first(".EmbeddedMediaImage")
+    if not display_url:
+        typename = "GraphVideo"
+        display_url = tree.css_first("video")
+    display_url = display_url.attrs["src"]
+    username = tree.css_first(".UsernameText").text()
+    # Remove div class CaptionComments, CaptionUsername
+    tree.css_first(".CaptionComments").remove()
+    tree.css_first(".CaptionUsername").remove()
+    caption = tree.css_first(".Caption")
+    for node in caption.css("br"):
+        node.replace_with("\n")
+    caption_text = caption.text().strip()
+    return {
+        "shortcode_media": {
+            "__typename": typename,
+            "owner": {"username": username},
+            "node": {"display_url": display_url},
+            "edge_media_to_caption": {"edges": [{"node": {"text": caption_text}}]},
+            "dimensions": {"height": None, "width": None},
+        }
+    }
 
 
 @app.on_event("startup")
@@ -92,18 +131,21 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
 
     data = await get_data(request, post_id)
     item = data["shortcode_media"]
-
-    media_lst = item["edge_sidecar_to_children"]["edges"]
-    media = (media_lst[num - 1] if num else media_lst[0])["node"]
+    if "edge_sidecar_to_children" in item:
+        media_lst = item["edge_sidecar_to_children"]["edges"]
+        media = (media_lst[num - 1] if num else media_lst[0])["node"]
+    else:
+        media = item
 
     description = item["edge_media_to_caption"]["edges"][0]["node"]["text"]
     username = item["owner"]["username"]
-
     ctx = {
         "request": request,
         "url": post_url,
         "description": description,
         "username": username,
+        "width": media["dimensions"]["width"],
+        "height": media["dimensions"]["height"],
     }
 
     if num is None and media["__typename"] == "GraphImage":
@@ -111,17 +153,11 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
         ctx["card"] = "summary_large_image"
     elif media["__typename"] == "GraphVideo":
         num = num if num else 1
-        video = media["video_versions"][0]
         ctx["video"] = f"/videos/{post_id}/{num}"
-        ctx["width"] = video["width"]
-        ctx["height"] = video["height"]
         ctx["card"] = "player"
     elif media["__typename"] == "GraphImage":
         num = num if num else 1
-        image = media["image_versions2"]["candidates"][0]
         ctx["image"] = f"/images/{post_id}/{num}"
-        ctx["width"] = image["width"]
-        ctx["height"] = image["height"]
         ctx["card"] = "summary_large_image"
     return templates.TemplateResponse("base.html", ctx)
 
@@ -130,14 +166,13 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
 async def videos(request: Request, post_id: str, num: int):
     data = await get_data(request, post_id)
     item = data["shortcode_media"]
+    if "edge_sidecar_to_children" in item:
+        media_lst = item["edge_sidecar_to_children"]["edges"]
+        media = (media_lst[num - 1] if num else media_lst[0])["node"]
+    else:
+        media = item
 
-    media_lst = item["edge_sidecar_to_children"]["edges"]
-    media = (media_lst[num - 1] if num else media_lst[0])["node"]
-
-    video_url = media["display_url"]
-    video_url = re.sub(
-        r"https:\/\/.*?\/v\/", "https://scontent.cdninstagram.com/v/", video_url
-    )
+    video_url = media.get("video_url") or media.get("display_url")
     return RedirectResponse(video_url)
 
 
@@ -146,13 +181,13 @@ async def images(request: Request, post_id: str, num: int):
     data = await get_data(request, post_id)
     item = data["shortcode_media"]
 
-    media_lst = item["edge_sidecar_to_children"]["edges"]
-    media = (media_lst[num - 1] if num else media_lst[0])["node"]
+    if "edge_sidecar_to_children" in item:
+        media_lst = item["edge_sidecar_to_children"]["edges"]
+        media = (media_lst[num - 1] if num else media_lst[0])["node"]
+    else:
+        media = item
 
     image_url = media["display_url"]
-    image_url = re.sub(
-        r"https:\/\/.*?\/v\/", "https://scontent.cdninstagram.com/v/", image_url
-    )
     return RedirectResponse(image_url)
 
 
@@ -172,12 +207,16 @@ async def grid(request: Request, post_id: str):
 
     data = await get_data(request, post_id)
     item = data["shortcode_media"]
-
-    media_lst = item["edge_sidecar_to_children"]["edges"]
+    if "edge_sidecar_to_children" in item:
+        media_lst = item["edge_sidecar_to_children"]["edges"]
+    else:
+        media_lst = [item]
 
     # Limit to 4 images, Discord only show 4 images originally
     media_urls = [
-        m["node"]["display_url"] for m in media_lst if m["__typename"] == "GraphImage"
+        m["node"]["display_url"]
+        for m in media_lst
+        if m["node"]["__typename"] == "GraphImage"
     ][:4]
 
     # Download images and merge them into a single image
