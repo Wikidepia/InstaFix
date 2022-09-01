@@ -2,7 +2,6 @@ import asyncio
 import json
 import os
 import re
-from http.cookiejar import MozillaCookieJar
 from typing import Optional
 
 import aioredis
@@ -12,8 +11,6 @@ import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-
-SAFE_ERROR = ["Media not found", "Invalid media_id", "geoblock_required"]
 
 pyvips.cache_set_max(0)
 pyvips.cache_set_max_mem(0)
@@ -28,9 +25,6 @@ if "SENTRY_DSN" in os.environ:
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
-cookies = MozillaCookieJar("cookies.txt")
-cookies.load()
-
 headers = {
     "accept": "*/*",
     "accept-language": "en-US,en;q=0.9",
@@ -43,38 +37,22 @@ headers = {
     "x-ig-app-id": "1217981644879628",
 }
 
-# Thanks to @gerbz! https://stackoverflow.com/a/37246231
-def shortcode_to_mediaid(shortcode):
-    alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
-    mediaid = 0
-    for letter in shortcode:
-        mediaid = (mediaid * 64) + alphabet.index(letter)
-    return mediaid
-
-
 async def get_data(request: Request, post_id: str) -> Optional[dict]:
     r = request.app.state.redis
     client = app.state.client
 
-    data = await r.get(post_id)
-    missed = data is None
-    if missed:
-        media_id = shortcode_to_mediaid(post_id)
-        for _ in range(3):
-            api_resp = await client.get(
-                f"https://i.instagram.com/api/v1/media/{media_id}/info/",
+    api_resp = await r.get(post_id)
+    if api_resp is None:
+        api_resp = (
+            await client.get(
+                f"https://www.instagram.com/p/{post_id}/embed/captioned",
             )
-            data = api_resp.text
-            if data != "":
-                break
-            await asyncio.sleep(0.1)
-    data_dict = json.loads(data)
-    message = data_dict.get("message")
-    if message and all(err not in message for err in SAFE_ERROR):
-        raise Exception(message)
-    if missed and message is None:
-        await r.set(post_id, data, ex=24 * 3600)
-    return data_dict
+        ).text
+        await r.set(post_id, api_resp, ex=24 * 3600)
+    data = re.findall(
+        r"window\.__additionalDataLoaded\('extra',(.*)\);<\/script>", api_resp
+    )
+    return json.loads(data[0])
 
 
 @app.on_event("startup")
@@ -83,7 +61,7 @@ async def startup():
         "redis://localhost:6379", encoding="utf-8", decode_responses=True
     )
     app.state.client = httpx.AsyncClient(
-        headers=headers, cookies=cookies, follow_redirects=True, timeout=60.0
+        headers=headers, follow_redirects=True, timeout=60.0
     )
 
 
@@ -113,36 +91,32 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
         return RedirectResponse(post_url)
 
     data = await get_data(request, post_id)
-    if "items" not in data:
-        return
-    item = data["items"][0]
+    item = data["shortcode_media"]
 
-    media_lst = item["carousel_media"] if "carousel_media" in item else [item]
-    media = media_lst[num - 1] if num else media_lst[0]
+    media_lst = item["edge_sidecar_to_children"]["edges"]
+    media = (media_lst[num - 1] if num else media_lst[0])["node"]
 
-    description = item["caption"]["text"] if item["caption"] else ""
-    full_name = item["user"]["full_name"]
-    username = item["user"]["username"]
+    description = item["edge_media_to_caption"]["edges"][0]["node"]["text"]
+    username = item["owner"]["username"]
 
     ctx = {
         "request": request,
         "url": post_url,
         "description": description,
-        "full_name": full_name,
         "username": username,
     }
 
-    if num is None and "video_versions" not in media:
+    if num is None and media["__typename"] == "GraphImage":
         ctx["image"] = f"/grid/{post_id}"
         ctx["card"] = "summary_large_image"
-    elif "video_versions" in media:
+    elif media["__typename"] == "GraphVideo":
         num = num if num else 1
         video = media["video_versions"][0]
         ctx["video"] = f"/videos/{post_id}/{num}"
         ctx["width"] = video["width"]
         ctx["height"] = video["height"]
         ctx["card"] = "player"
-    elif "image_versions2" in media:
+    elif media["__typename"] == "GraphImage":
         num = num if num else 1
         image = media["image_versions2"]["candidates"][0]
         ctx["image"] = f"/images/{post_id}/{num}"
@@ -155,13 +129,12 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
 @app.get("/videos/{post_id}/{num}")
 async def videos(request: Request, post_id: str, num: int):
     data = await get_data(request, post_id)
-    if "items" not in data:
-        return
-    item = data["items"][0]
+    item = data["shortcode_media"]
 
-    media_lst = item["carousel_media"] if "carousel_media" in item else [item]
-    media = media_lst[num - 1]
-    video_url = media["video_versions"][0]["url"]
+    media_lst = item["edge_sidecar_to_children"]["edges"]
+    media = (media_lst[num - 1] if num else media_lst[0])["node"]
+
+    video_url = media["display_url"]
     video_url = re.sub(
         r"https:\/\/.*?\/v\/", "https://scontent.cdninstagram.com/v/", video_url
     )
@@ -171,13 +144,12 @@ async def videos(request: Request, post_id: str, num: int):
 @app.get("/images/{post_id}/{num}")
 async def images(request: Request, post_id: str, num: int):
     data = await get_data(request, post_id)
-    if "items" not in data:
-        return
-    item = data["items"][0]
+    item = data["shortcode_media"]
 
-    media_lst = item["carousel_media"] if "carousel_media" in item else [item]
-    media = media_lst[num - 1]
-    image_url = media["image_versions2"]["candidates"][0]["url"]
+    media_lst = item["edge_sidecar_to_children"]["edges"]
+    media = (media_lst[num - 1] if num else media_lst[0])["node"]
+
+    image_url = media["display_url"]
     image_url = re.sub(
         r"https:\/\/.*?\/v\/", "https://scontent.cdninstagram.com/v/", image_url
     )
@@ -199,16 +171,13 @@ async def grid(request: Request, post_id: str):
         return resp.content
 
     data = await get_data(request, post_id)
-    if "items" not in data:
-        return
-    item = data["items"][0]
+    item = data["shortcode_media"]
 
-    media_lst = item["carousel_media"] if "carousel_media" in item else [item]
+    media_lst = item["edge_sidecar_to_children"]["edges"]
+
     # Limit to 4 images, Discord only show 4 images originally
     media_urls = [
-        m["image_versions2"]["candidates"][0]["url"]
-        for m in media_lst
-        if "image_versions2" in m and "video_versions" not in m
+        m["node"]["display_url"] for m in media_lst if m["__typename"] == "GraphImage"
     ][:4]
 
     # Download images and merge them into a single image
