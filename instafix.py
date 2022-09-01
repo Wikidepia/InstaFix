@@ -216,7 +216,7 @@ async def grid(request: Request, post_id: str):
     media_urls = [
         m["node"]["display_url"]
         for m in media_lst
-        if m["node"]["__typename"] == "GraphImage"
+        if m.get("node", m)["__typename"] == "GraphImage"
     ][:4]
 
     # Download images and merge them into a single image
