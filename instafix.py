@@ -52,11 +52,9 @@ async def get_data(request: Request, post_id: str) -> Optional[dict]:
     if api_resp is None:
         api_resp = (
             await client.get(
-                f"https://www.instagram.com/p/{post_id}/embed/captioned",
+                f"https://www.instagram.com/reel/{post_id}/embed/captioned",
             )
         ).text
-        with open("debug.html", "w") as f:
-            f.write(api_resp)
         await r.set(post_id, api_resp, ex=24 * 3600)
     data = re.findall(
         r"window\.__additionalDataLoaded\('extra',(.*)\);<\/script>", api_resp
@@ -166,12 +164,16 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
 async def videos(request: Request, post_id: str, num: int):
     data = await get_data(request, post_id)
     item = data["shortcode_media"]
+    with open("embed.json", "w") as f:
+        json.dump(item, f, indent=2)
     if "edge_sidecar_to_children" in item:
         media_lst = item["edge_sidecar_to_children"]["edges"]
-        media = (media_lst[num - 1] if num else media_lst[0])["node"]
+        media = (media_lst[num - 1] if num else media_lst[0])
     else:
         media = item
 
+    if "node" in media:
+        media = media["node"]
     video_url = media.get("video_url") or media.get("display_url")
     return RedirectResponse(video_url)
 
@@ -183,10 +185,12 @@ async def images(request: Request, post_id: str, num: int):
 
     if "edge_sidecar_to_children" in item:
         media_lst = item["edge_sidecar_to_children"]["edges"]
-        media = (media_lst[num - 1] if num else media_lst[0])["node"]
+        media = (media_lst[num - 1] if num else media_lst[0])
     else:
         media = item
 
+    if "node" in media:
+        media = media["node"]
     image_url = media["display_url"]
     return RedirectResponse(image_url)
 
