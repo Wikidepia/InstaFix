@@ -6,7 +6,7 @@
     <meta content="#CE0071" name="theme-color" />
 
     <meta name="twitter:card" content="{{ card }}" />
-    <meta name="twitter:title" content="{{ full_name }} (@{{ username }})" />
+    <meta name="twitter:title" content="@{{ username }}" />
     <meta name="twitter:image" content="{{ image }}" />
 
     {% if video is defined %}
@@ -19,9 +19,12 @@
     <meta property="og:site_name" content="InstaFix">
     <meta property="og:url" content="{{ url }}" />
     <meta property="og:description" content="{{ description }}" />
+
+    {% if image is defined %}
     <meta property="og:image" content="{{ image }}" />
     <meta property="og:image:width" content="{{ width }}" />
     <meta property="og:image:height" content="{{ height }}" />
+    {% endif %}
 
     {% if video is defined %}
     <meta property="og:video" content="{{ video }}" />

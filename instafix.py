@@ -83,9 +83,8 @@ def parse_embed(html: str) -> dict:
     caption_text = caption.text().strip()
     return {
         "shortcode_media": {
-            "__typename": typename,
             "owner": {"username": username},
-            "node": {"display_url": display_url},
+            "node": {"__typename": typename, "display_url": display_url},
             "edge_media_to_caption": {"edges": [{"node": {"text": caption_text}}]},
             "dimensions": {"height": None, "width": None},
         }
@@ -137,6 +136,7 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
 
     description = item["edge_media_to_caption"]["edges"][0]["node"]["text"]
     username = item["owner"]["username"]
+
     ctx = {
         "request": request,
         "url": post_url,
@@ -164,17 +164,15 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
 async def videos(request: Request, post_id: str, num: int):
     data = await get_data(request, post_id)
     item = data["shortcode_media"]
-    with open("embed.json", "w") as f:
-        json.dump(item, f, indent=2)
+
     if "edge_sidecar_to_children" in item:
         media_lst = item["edge_sidecar_to_children"]["edges"]
-        media = (media_lst[num - 1] if num else media_lst[0])
+        media = media_lst[num - 1] if num else media_lst[0]
     else:
         media = item
 
-    if "node" in media:
-        media = media["node"]
-    video_url = media.get("video_url") or media.get("display_url")
+    media = media.get("node", media)
+    video_url = media.get("video_url", media["display_url"])
     return RedirectResponse(video_url)
 
 
@@ -185,12 +183,11 @@ async def images(request: Request, post_id: str, num: int):
 
     if "edge_sidecar_to_children" in item:
         media_lst = item["edge_sidecar_to_children"]["edges"]
-        media = (media_lst[num - 1] if num else media_lst[0])
+        media = media_lst[num - 1] if num else media_lst[0]
     else:
         media = item
 
-    if "node" in media:
-        media = media["node"]
+    media = media.get("node", media)
     image_url = media["display_url"]
     return RedirectResponse(image_url)
 
@@ -211,6 +208,7 @@ async def grid(request: Request, post_id: str):
 
     data = await get_data(request, post_id)
     item = data["shortcode_media"]
+
     if "edge_sidecar_to_children" in item:
         media_lst = item["edge_sidecar_to_children"]["edges"]
     else:
