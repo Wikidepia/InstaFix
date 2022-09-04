@@ -9,9 +9,11 @@ import httpx
 import pyvips
 import sentry_sdk
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import (FileResponse, HTMLResponse, RedirectResponse,
+                               StreamingResponse)
 from fastapi.templating import Jinja2Templates
 from selectolax.parser import HTMLParser
+from starlette.background import BackgroundTask
 
 pyvips.cache_set_max(0)
 pyvips.cache_set_max_mem(0)
@@ -162,6 +164,7 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
 
 @app.get("/videos/{post_id}/{num}")
 async def videos(request: Request, post_id: str, num: int):
+    client = app.state.client
     data = await get_data(request, post_id)
     item = data["shortcode_media"]
 
@@ -173,7 +176,15 @@ async def videos(request: Request, post_id: str, num: int):
 
     media = media.get("node", media)
     video_url = media.get("video_url", media["display_url"])
-    return RedirectResponse(video_url)
+
+    # Proxy video because IG limit speed with browser User-Agent (weird!)
+    response = await client.get(video_url, headers={"User-Agent": "curl"})
+    return StreamingResponse(
+        response.aiter_bytes(),
+        media_type=response.headers["Content-Type"],
+        headers={"Content-Disposition": "inline"},
+        background=BackgroundTask(response.aclose),
+    )
 
 
 @app.get("/images/{post_id}/{num}")
