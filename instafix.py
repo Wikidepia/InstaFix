@@ -136,6 +136,7 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
     else:
         media = item
 
+    typename = media.get("__typename", media["node"]["__typename"])
     description = item["edge_media_to_caption"]["edges"][0]["node"]["text"]
     username = item["owner"]["username"]
 
@@ -148,14 +149,14 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
         "height": media["dimensions"]["height"],
     }
 
-    if num is None and media["__typename"] == "GraphImage":
+    if num is None and typename == "GraphImage":
         ctx["image"] = f"/grid/{post_id}"
         ctx["card"] = "summary_large_image"
-    elif media["__typename"] == "GraphVideo":
+    elif typename == "GraphVideo":
         num = num if num else 1
         ctx["video"] = f"/videos/{post_id}/{num}"
         ctx["card"] = "player"
-    elif media["__typename"] == "GraphImage":
+    elif typename == "GraphImage":
         num = num if num else 1
         ctx["image"] = f"/images/{post_id}/{num}"
         ctx["card"] = "summary_large_image"
