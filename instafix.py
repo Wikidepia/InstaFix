@@ -142,12 +142,9 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
     else:
         media = item
 
+    typename = media.get("node", media)["__typename"]
     description = item["edge_media_to_caption"]["edges"][0]["node"]["text"]
     username = item["owner"]["username"]
-    if "__typename" in media:
-        typename = media["__typename"]
-    elif "__typename" in media["node"]:
-        typename = media["node"]["__typename"]
 
     ctx = {
         "request": request,
