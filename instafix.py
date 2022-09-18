@@ -76,9 +76,15 @@ def parse_embed(html: str) -> dict:
         display_url = tree.css_first("video")
     display_url = display_url.attrs["src"]
     username = tree.css_first(".UsernameText").text()
+
     # Remove div class CaptionComments, CaptionUsername
-    tree.css_first(".CaptionComments").remove()
-    tree.css_first(".CaptionUsername").remove()
+    caption_comments = tree.css_first(".CaptionComments")
+    if caption_comments:
+        caption_comments.remove()
+    caption_username = tree.css_first(".CaptionUsername")
+    if caption_username:
+        caption_username.remove()
+
     caption = tree.css_first(".Caption")
     for node in caption.css("br"):
         node.replace_with("\n")
@@ -132,7 +138,7 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
     item = data["shortcode_media"]
     if "edge_sidecar_to_children" in item:
         media_lst = item["edge_sidecar_to_children"]["edges"]
-        media = (media_lst[num - 1] if num else media_lst[0])["node"]
+        media = (media_lst[num - 1 if num else 0])["node"]
     else:
         media = item
 
@@ -168,7 +174,6 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
 
 @app.get("/videos/{post_id}/{num}")
 async def videos(request: Request, post_id: str, num: int):
-    client = app.state.client
     data = await get_data(request, post_id)
     item = data["shortcode_media"]
 
@@ -180,15 +185,7 @@ async def videos(request: Request, post_id: str, num: int):
 
     media = media.get("node", media)
     video_url = media.get("video_url", media["display_url"])
-
-    # Proxy video because IG limit speed with browser User-Agent (weird!)
-    response = await client.get(video_url, headers={"User-Agent": "curl"})
-    return StreamingResponse(
-        response.aiter_bytes(),
-        media_type=response.headers["Content-Type"],
-        headers={"Content-Disposition": "inline"},
-        background=BackgroundTask(response.aclose),
-    )
+    return RedirectResponse(video_url)
 
 
 @app.get("/images/{post_id}/{num}")
