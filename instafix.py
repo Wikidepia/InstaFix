@@ -7,6 +7,7 @@ from typing import Optional
 import aioredis
 import httpx
 import pyvips
+import requests
 import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.responses import (FileResponse, HTMLResponse, RedirectResponse,
@@ -182,7 +183,11 @@ async def videos(request: Request, post_id: str, num: int):
 
     media = media.get("node", media)
     video_url = media.get("video_url", media["display_url"])
-    return RedirectResponse(video_url)
+
+    # Proxy video because Instagram speed limit
+    return StreamingResponse(
+        requests.get(video_url, stream=True).iter_content(chunk_size=1024),
+    )
 
 
 @app.get("/images/{post_id}/{num}")
