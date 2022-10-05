@@ -187,6 +187,7 @@ async def videos(request: Request, post_id: str, num: int):
     # Proxy video because Instagram speed limit
     return StreamingResponse(
         requests.get(video_url, stream=True).iter_content(chunk_size=1024),
+        media_type="video/mp4",
     )
 
 
