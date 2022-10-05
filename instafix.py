@@ -7,7 +7,6 @@ from typing import Optional
 import aioredis
 import httpx
 import pyvips
-import requests
 import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.responses import (FileResponse, HTMLResponse, RedirectResponse,
@@ -108,6 +107,7 @@ async def startup():
     app.state.client = httpx.AsyncClient(
         headers=headers, follow_redirects=True, timeout=60.0
     )
+    app.state.proxy_client = httpx.AsyncClient(follow_redirects=True, timeout=60.0)
 
 
 @app.on_event("shutdown")
@@ -172,6 +172,7 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
 
 @app.get("/videos/{post_id}/{num}")
 async def videos(request: Request, post_id: str, num: int):
+    client = app.state.proxy_client
     data = await get_data(request, post_id)
     item = data["shortcode_media"]
 
@@ -185,9 +186,13 @@ async def videos(request: Request, post_id: str, num: int):
     video_url = media.get("video_url", media["display_url"])
 
     # Proxy video because Instagram speed limit
+    req = client.build_request("GET", video_url)
+    stream = await client.send(req, stream=True)
     return StreamingResponse(
-        requests.get(video_url, stream=True).iter_content(chunk_size=1024),
-        media_type="video/mp4",
+        stream.aiter_bytes(),
+        media_type=stream.headers["Content-Type"],
+        headers={"Content-Length": stream.headers["Content-Length"]},
+        background=BackgroundTask(stream.aclose),
     )
 
 
