@@ -8,7 +8,7 @@ import aioredis
 import httpx
 import pyvips
 import sentry_sdk
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import (FileResponse, HTMLResponse, RedirectResponse,
                                StreamingResponse)
 from fastapi.templating import Jinja2Templates
@@ -66,6 +66,8 @@ def parse_embed(html: str) -> dict:
     if not display_url:
         typename = "GraphVideo"
         display_url = tree.css_first("video")
+    if not display_url:
+        return {"error": "Not found"}
     display_url = display_url.attrs["src"]
     username = tree.css_first(".UsernameText").text()
 
@@ -127,6 +129,8 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
         return RedirectResponse(post_url)
 
     data = await get_data(request, post_id)
+    if "error" in data:
+        return HTTPException(status_code=404, detail="Post not found")
     item = data["shortcode_media"]
     if "edge_sidecar_to_children" in item:
         media_lst = item["edge_sidecar_to_children"]["edges"]
@@ -165,6 +169,8 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
 async def videos(request: Request, post_id: str, num: int):
     client = app.state.client
     data = await get_data(request, post_id)
+    if "error" in data:
+        return HTTPException(status_code=404, detail="Post not found")
     item = data["shortcode_media"]
 
     if "edge_sidecar_to_children" in item:
@@ -190,6 +196,8 @@ async def videos(request: Request, post_id: str, num: int):
 @app.get("/images/{post_id}/{num}")
 async def images(request: Request, post_id: str, num: int):
     data = await get_data(request, post_id)
+    if "error" in data:
+        return HTTPException(status_code=404, detail="Post not found")
     item = data["shortcode_media"]
 
     if "edge_sidecar_to_children" in item:
@@ -218,6 +226,8 @@ async def grid(request: Request, post_id: str):
         return resp.content
 
     data = await get_data(request, post_id)
+    if "error" in data:
+        return HTTPException(status_code=404, detail="Post not found")
     item = data["shortcode_media"]
 
     if "edge_sidecar_to_children" in item:
