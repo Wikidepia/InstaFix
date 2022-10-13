@@ -29,20 +29,12 @@ app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
 headers = {
-    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+    "accept": "*/*",
     "accept-language": "en-US,en;q=0.9",
-    "cache-control": "max-age=0",
-    "sec-ch-prefers-color-scheme": "dark",
-    "sec-ch-ua": '" Not A;Brand";v="99", "Chromium";v="100"',
-    "sec-ch-ua-mobile": "?1",
-    "sec-ch-ua-platform": '"Android"',
-    "sec-fetch-dest": "document",
-    "sec-fetch-mode": "navigate",
-    "sec-fetch-site": "none",
-    "sec-fetch-user": "?1",
-    "upgrade-insecure-requests": "1",
-    "user-agent": "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.60 Mobile Safari/537.36",
-    "viewport-width": "1280",
+    "cache-control": "no-cache",
+    "pragma": "no-cache",
+    "referer": "https://www.instagram.com/",
+    "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.60 Safari/537.36",
 }
 
 
@@ -171,6 +163,7 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
 
 @app.get("/videos/{post_id}/{num}")
 async def videos(request: Request, post_id: str, num: int):
+    client = app.state.client
     data = await get_data(request, post_id)
     item = data["shortcode_media"]
 
@@ -182,7 +175,16 @@ async def videos(request: Request, post_id: str, num: int):
 
     media = media.get("node", media)
     video_url = media.get("video_url", media["display_url"])
-    return RedirectResponse(video_url)
+
+    # Proxy video because Instagram speed limit
+    req = client.build_request("GET", video_url)
+    stream = await client.send(req, stream=True)
+    return StreamingResponse(
+        stream.aiter_bytes(),
+        media_type=stream.headers["Content-Type"],
+        headers={"Content-Length": stream.headers["Content-Length"]},
+        background=BackgroundTask(stream.aclose),
+    )
 
 
 @app.get("/images/{post_id}/{num}")
