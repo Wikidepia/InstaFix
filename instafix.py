@@ -79,10 +79,13 @@ def parse_embed(html: str) -> dict:
     if caption_username:
         caption_username.remove()
 
+    caption_text = ""
     caption = tree.css_first(".Caption")
-    for node in caption.css("br"):
-        node.replace_with("\n")
-    caption_text = caption.text().strip()
+    if caption:
+        for node in caption.css("br"):
+            node.replace_with("\n")
+        caption_text = caption.text().strip()
+
     return {
         "shortcode_media": {
             "owner": {"username": username},
