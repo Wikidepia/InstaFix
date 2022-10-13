@@ -41,6 +41,7 @@ headers = {
     "sec-fetch-site": "none",
     "sec-fetch-user": "?1",
     "upgrade-insecure-requests": "1",
+    "referer": "https://www.instagram.com/",
     "user-agent": "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.60 Mobile Safari/537.36",
     "viewport-width": "1280",
 }
@@ -107,7 +108,6 @@ async def startup():
     app.state.client = httpx.AsyncClient(
         headers=headers, follow_redirects=True, timeout=60.0
     )
-    app.state.proxy_client = httpx.AsyncClient(follow_redirects=True, timeout=60.0)
 
 
 @app.on_event("shutdown")
@@ -172,7 +172,7 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
 
 @app.get("/videos/{post_id}/{num}")
 async def videos(request: Request, post_id: str, num: int):
-    client = app.state.proxy_client
+    client = app.state.client
     data = await get_data(request, post_id)
     item = data["shortcode_media"]
 
