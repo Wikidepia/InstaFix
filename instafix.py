@@ -165,14 +165,15 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
         "height": media["dimensions"]["height"],
     }
 
-    if num is None and typename == "GraphImage":
+    is_image = typename in ["GraphImage", "StoryImage", "StoryVideo"]
+    if num is None and is_image:
         ctx["image"] = f"/grid/{post_id}"
         ctx["card"] = "summary_large_image"
     elif typename == "GraphVideo":
         num = num if num else 1
         ctx["video"] = f"/videos/{post_id}/{num}"
         ctx["card"] = "player"
-    elif typename == "GraphImage":
+    elif is_image:
         num = num if num else 1
         ctx["image"] = f"/images/{post_id}/{num}"
         ctx["card"] = "summary_large_image"
@@ -255,11 +256,12 @@ async def grid(request: Request, post_id: str):
     else:
         media_lst = [item]
 
+    is_image = lambda x: x in ["GraphImage", "StoryImage", "StoryVideo"]
     # Limit to 4 images, Discord only show 4 images originally
     media_urls = [
-        m["node"]["display_url"]
+        m.get("node", m)["display_url"]
         for m in media_lst
-        if m.get("node", m)["__typename"] == "GraphImage"
+        if is_image(m.get("node", m)["__typename"])
     ][:4]
 
     # Download images and merge them into a single image
