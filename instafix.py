@@ -96,6 +96,15 @@ def parse_embed(html: str) -> dict:
     }
 
 
+def mediaid_to_code(media_id):
+    alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+    short_code = ""
+    while media_id > 0:
+        media_id, remainder = divmod(media_id, 64)
+        short_code = alphabet[remainder] + short_code
+    return short_code
+
+
 @app.on_event("startup")
 async def startup():
     app.state.redis = await aioredis.from_url(
@@ -119,10 +128,10 @@ def root():
     return HTMLResponse(content=html)
 
 
-@app.get("/p/{post_id}", response_class=HTMLResponse)
-@app.get("/p/{post_id}/{num}", response_class=HTMLResponse)
-@app.get("/reel/{post_id}", response_class=HTMLResponse)
-@app.get("/tv/{post_id}", response_class=HTMLResponse)
+@app.get("/p/{post_id}")
+@app.get("/p/{post_id}/{num}")
+@app.get("/reel/{post_id}")
+@app.get("/tv/{post_id}")
 async def read_item(request: Request, post_id: str, num: Optional[int] = None):
     post_url = f"https://instagram.com/p/{post_id}"
     if not re.search(
@@ -168,6 +177,12 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
         ctx["image"] = f"/images/{post_id}/{num}"
         ctx["card"] = "summary_large_image"
     return templates.TemplateResponse("base.html", ctx)
+
+
+@app.get("/stories/{username}/{post_id}")
+async def stories(username: str, post_id: str):
+    post_code = mediaid_to_code(int(post_id))
+    return RedirectResponse(f"/p/{post_code}")
 
 
 @app.get("/videos/{post_id}/{num}")
