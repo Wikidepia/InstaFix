@@ -207,7 +207,7 @@ async def videos(request: Request, post_id: str, num: int):
     req = client.build_request("GET", video_url)
     stream = await client.send(req, stream=True)
     return StreamingResponse(
-        stream.aiter_bytes(),
+        stream.aiter_bytes(1024 * 4),
         media_type=stream.headers["Content-Type"],
         headers={"Content-Length": stream.headers["Content-Length"]},
         background=BackgroundTask(stream.aclose),
