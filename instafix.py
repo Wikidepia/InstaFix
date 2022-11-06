@@ -203,16 +203,16 @@ async def videos(request: Request, post_id: str, num: int):
     media = media.get("node", media)
     video_url = media.get("video_url", media["display_url"])
 
-    # Proxy video because Instagram speed limit
-    req = client.build_request("GET", video_url)
-    stream = await client.send(req, stream=True)
-    return StreamingResponse(
-        stream.aiter_bytes(1024 * 4),
-        media_type=stream.headers["Content-Type"],
-        headers={"Content-Length": stream.headers["Content-Length"]},
-        background=BackgroundTask(stream.aclose),
-    )
-
+    # # Proxy video because Instagram speed limit
+    # req = client.build_request("GET", video_url)
+    # stream = await client.send(req, stream=True)
+    # return StreamingResponse(
+    #     stream.aiter_bytes(1024 * 4),
+    #     media_type=stream.headers["Content-Type"],
+    #     headers={"Content-Length": stream.headers["Content-Length"]},
+    #     background=BackgroundTask(stream.aclose),
+    # )
+    return RedirectResponse(video_url, status_code=302)
 
 @app.get("/images/{post_id}/{num}")
 async def images(request: Request, post_id: str, num: int):
