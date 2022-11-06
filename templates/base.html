@@ -36,6 +36,7 @@
 
     <meta name="description" content="{{ description }}" />
     <meta http-equiv="refresh" content="0; url = {{ url }}" />
+    <link rel="alternate" href="{{ url_for('oembed') }}?post_id={{ post_id }}" type="application/json+oembed">
 </head>
 
 <body>
