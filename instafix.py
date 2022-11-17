@@ -54,17 +54,17 @@ async def get_data(request: Request, post_id: str) -> Optional[dict]:
             )
         ).text
         await r.set(post_id, api_resp, ex=24 * 3600)
+
     data = re.findall(r'<script>(requireLazy\(\["TimeSliceImpl".*)<\/script>', api_resp)
-    if data:
+    if "shortcode_media" in api_resp:
         tokenized = esprima.tokenize(data[0])
         for token in tokenized:
-            if "shortcode_media" not in token.value:
-                continue
-            # loads to unescape the JSON
-            data = json.loads(json.loads(token.value)).get("gql_data")
+            if "shortcode_media" in token.value:
+                # json.loads to unescape the JSON
+                gql_data = json.loads(json.loads(token.value))["gql_data"]
     else:
-        data = parse_embed(api_resp)
-    return data
+        gql_data = parse_embed(api_resp)
+    return gql_data
 
 
 def parse_embed(html: str) -> dict:
