@@ -15,6 +15,7 @@ sentry-sdk = "^1.6.0"
 pyvips = "^2.2.1"
 httpx = "^0.23.0"
 selectolax = "^0.3.8"
+esprima = "^4.0.1"
 
 [tool.poetry.dev-dependencies]
 

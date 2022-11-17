@@ -5,6 +5,7 @@ import re
 from typing import Optional
 
 import aioredis
+import esprima
 import httpx
 import pyvips
 import sentry_sdk
@@ -29,12 +30,14 @@ app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
 headers = {
-    "accept": "*/*",
+    "authority": "www.instagram.com",
+    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
     "accept-language": "en-US,en;q=0.9",
-    "cache-control": "no-cache",
-    "pragma": "no-cache",
+    "cache-control": "max-age=0",
+    "upgrade-insecure-requests": "1",
     "referer": "https://www.instagram.com/",
     "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.60 Safari/537.36",
+    "viewport-width": "1280",
 }
 
 
@@ -46,15 +49,19 @@ async def get_data(request: Request, post_id: str) -> Optional[dict]:
     if api_resp is None:
         api_resp = (
             await client.get(
-                f"https://www.instagram.com/reel/{post_id}/embed/captioned",
+                f"https://www.instagram.com/p/{post_id}/embed/captioned",
             )
         ).text
         await r.set(post_id, api_resp, ex=24 * 3600)
-    data = re.findall(
-        r"window\.__additionalDataLoaded\('extra',(.*)\);<\/script>", api_resp
-    )
-    data = json.loads(data[0])
-    if data is None:
+    data = re.findall(r'<script>(requireLazy\(\["TimeSliceImpl".*)<\/script>', api_resp)
+    if data:
+        tokenized = esprima.tokenize(data[0])
+        for token in tokenized:
+            if "shortcode_media" not in token.value:
+                continue
+            # loads to unescape the JSON
+            data = json.loads(json.loads(token.value)).get("gql_data")
+    else:
         data = parse_embed(api_resp)
     return data
 
