@@ -55,6 +55,12 @@ async def get_data(request: Request, post_id: str) -> Optional[dict]:
         ).text
         await r.set(post_id, api_resp, ex=24 * 3600)
 
+    data = re.findall(
+        r"window\.__additionalDataLoaded\('extra',(.*)\);<\/script>", api_resp
+    )
+    if data:
+        return json.loads(data[0])
+    # TimeSliceImpl
     data = re.findall(r'<script>(requireLazy\(\["TimeSliceImpl".*)<\/script>', api_resp)
     if "shortcode_media" in api_resp:
         tokenized = esprima.tokenize(data[0])
