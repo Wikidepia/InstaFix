@@ -59,8 +59,10 @@ async def get_data(request: Request, post_id: str) -> Optional[dict]:
     data = re.findall(
         r"window\.__additionalDataLoaded\('extra',(.*)\);<\/script>", api_resp
     )
-    if data and "null" not in data[0]:
-        return json.loads(data[0])
+    if data:
+        gql_data = json.loads(data[0])
+        if gql_data:
+            return gql_data
 
     # TimeSliceImpl
     data = re.findall(r'<script>(requireLazy\(\["TimeSliceImpl".*)<\/script>', api_resp)
