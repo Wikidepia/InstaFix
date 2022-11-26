@@ -127,7 +127,7 @@ async def startup():
         "redis://localhost:6379", encoding="utf-8", decode_responses=True
     )
     app.state.client = httpx.AsyncClient(
-        headers=headers, follow_redirects=True, timeout=60.0
+        headers=headers, follow_redirects=True, timeout=120.0
     )
 
 
@@ -203,7 +203,6 @@ async def stories(username: str, post_id: str):
 
 @app.get("/videos/{post_id}/{num}")
 async def videos(request: Request, post_id: str, num: int):
-    client = app.state.client
     data = await get_data(request, post_id)
     if "error" in data:
         return HTTPException(status_code=404, detail="Post not found")
@@ -219,6 +218,7 @@ async def videos(request: Request, post_id: str, num: int):
     video_url = media.get("video_url", media["display_url"])
 
     # Proxy video because Instagram speed limit
+    client = httpx.AsyncClient(headers=headers, follow_redirects=True, timeout=120.0)
     req = client.build_request("GET", video_url)
     stream = await client.send(req, stream=True)
     return StreamingResponse(
