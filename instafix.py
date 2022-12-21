@@ -25,6 +25,8 @@ if "SENTRY_DSN" in os.environ:
         dsn=os.environ["SENTRY_DSN"],
     )
     print("Sentry initialized.")
+if "IG_PROXY" in os.environ:
+    print("Using proxy:", os.environ["IG_PROXY"])
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
