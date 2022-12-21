@@ -127,7 +127,10 @@ async def startup():
         "redis://localhost:6379", encoding="utf-8", decode_responses=True
     )
     app.state.client = httpx.AsyncClient(
-        headers=headers, follow_redirects=True, timeout=120.0
+        headers=headers,
+        follow_redirects=True,
+        timeout=120.0,
+        proxies={"all://www.instagram.com": os.environ.get("IG_PROXY")},
     )
 
 
