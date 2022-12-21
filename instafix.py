@@ -11,7 +11,7 @@ import pyvips
 import sentry_sdk
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
-                               RedirectResponse, StreamingResponse)
+                               RedirectResponse, Response, StreamingResponse)
 from fastapi.templating import Jinja2Templates
 from selectolax.parser import HTMLParser
 from starlette.background import BackgroundTask
@@ -320,3 +320,8 @@ async def grid(request: Request, post_id: str):
         media_type="image/jpeg",
         headers={"Cache-Control": "public, max-age=31536000"},
     )
+
+
+@app.get("/robots.txt")
+async def robots():
+    return Response("User-agent: *\nDisallow: /", media_type="text/plain")
