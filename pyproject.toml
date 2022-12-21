@@ -16,6 +16,7 @@ pyvips = "^2.2.1"
 httpx = "^0.23.0"
 selectolax = "^0.3.8"
 esprima = "^4.0.1"
+tenacity = "^8.1.0"
 
 [tool.poetry.dev-dependencies]
 

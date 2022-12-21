@@ -9,6 +9,7 @@ import esprima
 import httpx
 import pyvips
 import sentry_sdk
+import tenacity
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
                                RedirectResponse, Response, StreamingResponse)
@@ -44,6 +45,7 @@ headers = {
 }
 
 
+@tenacity.retry(stop=tenacity.stop_after_attempt(5))
 async def get_data(request: Request, post_id: str) -> Optional[dict]:
     r = request.app.state.redis
     client = app.state.client
