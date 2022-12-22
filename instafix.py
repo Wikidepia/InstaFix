@@ -96,9 +96,11 @@ async def _get_data(post_id: str) -> Optional[dict]:
 
     # Get data from HTML
     embed_data = parse_embed(api_resp)
-    if not (
-        embed_data["shortcode_media"]["video_blocked"]
-        and os.environ.get("USE_GRAPHQL", False)
+    use_graphql = os.environ.get("USE_GRAPHQL", False)
+    if (
+        "error" in embed_data
+        or not embed_data["shortcode_media"]["video_blocked"]
+        or not use_graphql
     ):
         return embed_data
 
