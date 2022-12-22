@@ -45,7 +45,7 @@ headers = {
 }
 
 
-@tenacity.retry(stop=tenacity.stop_after_attempt(5))
+@tenacity.retry(stop=tenacity.stop_after_attempt(5), wait=tenacity.wait_fixed(0.5))
 async def get_data(request: Request, post_id: str) -> Optional[dict]:
     r = request.app.state.redis
     client = app.state.client
