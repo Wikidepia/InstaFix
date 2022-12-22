@@ -21,6 +21,7 @@ pyvips.cache_set_max(0)
 pyvips.cache_set_max_mem(0)
 pyvips.cache_set_max_files(0)
 os.makedirs("static", exist_ok=True)
+
 if "SENTRY_DSN" in os.environ:
     sentry_sdk.init(
         dsn=os.environ["SENTRY_DSN"],
@@ -28,6 +29,12 @@ if "SENTRY_DSN" in os.environ:
     print("Sentry initialized.")
 if "IG_PROXY" in os.environ:
     print("Using proxy:", os.environ["IG_PROXY"])
+if "GRAPHQL_PROXY" in os.environ:
+    print("Using GraphQL proxy:", os.environ["GRAPHQL_PROXY"])
+    os.environ["USE_GRAPHQL"] = "1"
+if "GRAPHQL_SESSIONID" in os.environ:
+    print("Using GraphQL sessionid:", os.environ["GRAPHQL_SESSIONID"])
+    os.environ["USE_GRAPHQL"] = "1"
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
@@ -45,19 +52,27 @@ headers = {
 }
 
 
-@tenacity.retry(stop=tenacity.stop_after_attempt(3), wait=tenacity.wait_fixed(2.5))
-async def get_data(request: Request, post_id: str) -> Optional[dict]:
-    r = request.app.state.redis
+async def get_data(post_id: str) -> Optional[dict]:
+    r = app.state.redis
+
+    data = json.loads(await r.get(post_id))
+    if not data:
+        data = await _get_data(post_id)
+        await r.set(post_id, json.dumps(data), ex=24 * 3600)
+    if "data" in data:
+        data = data["data"]
+    return data
+
+
+@tenacity.retry(stop=tenacity.stop_after_attempt(5), wait=tenacity.wait_fixed(3))
+async def _get_data(post_id: str) -> Optional[dict]:
     client = app.state.client
 
-    api_resp = await r.get(post_id)
-    if api_resp is None:
-        api_resp = (
-            await client.get(
-                f"https://www.instagram.com/p/{post_id}/embed/captioned",
-            )
-        ).text
-        await r.set(post_id, api_resp, ex=24 * 3600)
+    api_resp = (
+        await client.get(
+            f"https://www.instagram.com/p/{post_id}/embed/captioned",
+        )
+    ).text
 
     # additionalDataLoaded
     data = re.findall(
@@ -76,7 +91,20 @@ async def get_data(request: Request, post_id: str) -> Optional[dict]:
             if "shortcode_media" in token.value:
                 # json.loads to unescape the JSON
                 return json.loads(json.loads(token.value))["gql_data"]
-    return parse_embed(api_resp)
+
+    # Get data from HTML
+    embed_data = parse_embed(api_resp)
+    if not (
+        embed_data["shortcode_media"]["video_blocked"]
+        and os.environ.get("USE_GRAPHQL", False)
+    ):
+        return embed_data
+
+    # Get data from GraphQL, if video is blocked
+    gql_data = await get_gql_cookie(post_id)
+    if gql_data.get("status") == "fail":
+        return embed_data
+    return gql_data["graphql"]
 
 
 def parse_embed(html: str) -> dict:
@@ -112,8 +140,22 @@ def parse_embed(html: str) -> dict:
             "node": {"__typename": typename, "display_url": display_url},
             "edge_media_to_caption": {"edges": [{"node": {"text": caption_text}}]},
             "dimensions": {"height": None, "width": None},
+            "video_blocked": tree.css_first(".WatchOnInstagram") is not None,
         }
     }
+
+
+async def get_gql_cookie(post_id: str) -> dict:
+    client = app.state.cookie_client
+
+    params = {
+        "query_hash": "b3055c01b4b222b8a47dc12b090e4e64",
+        "variables": json.dumps({"shortcode": post_id}),
+    }
+    response = await client.get(
+        "https://www.instagram.com/graphql/query/", params=params
+    )
+    return response.json()
 
 
 def mediaid_to_code(media_id):
@@ -135,6 +177,13 @@ async def startup():
         follow_redirects=True,
         timeout=120.0,
         proxies={"all://www.instagram.com": os.environ.get("IG_PROXY")},
+    )
+    app.state.cookie_client = httpx.AsyncClient(
+        headers=headers,
+        follow_redirects=True,
+        timeout=120.0,
+        proxies={"all://www.instagram.com": os.environ.get("GRAPHQL_PROXY")},
+        cookies={"sessionid": os.environ.get("GRAPHQL_SESSIONID")},
     )
 
 
@@ -163,7 +212,7 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
     ):
         return RedirectResponse(post_url)
 
-    data = await get_data(request, post_id)
+    data = await get_data(post_id)
     if "error" in data:
         return HTTPException(status_code=404, detail="Post not found")
     item = data["shortcode_media"]
@@ -210,7 +259,7 @@ async def stories(username: str, post_id: str):
 
 @app.get("/videos/{post_id}/{num}")
 async def videos(request: Request, post_id: str, num: int):
-    data = await get_data(request, post_id)
+    data = await get_data(post_id)
     if "error" in data:
         return HTTPException(status_code=404, detail="Post not found")
     item = data["shortcode_media"]
@@ -238,7 +287,7 @@ async def videos(request: Request, post_id: str, num: int):
 
 @app.get("/images/{post_id}/{num}")
 async def images(request: Request, post_id: str, num: int):
-    data = await get_data(request, post_id)
+    data = await get_data(post_id)
     if "error" in data:
         return HTTPException(status_code=404, detail="Post not found")
     item = data["shortcode_media"]
@@ -256,7 +305,7 @@ async def images(request: Request, post_id: str, num: int):
 
 @app.get("/oembed.json")
 async def oembed(request: Request, post_id: str):
-    data = await get_data(request, post_id)
+    data = await get_data(post_id)
     if "error" in data:
         return HTTPException(status_code=404, detail="Post not found")
     item = data["shortcode_media"]
@@ -290,7 +339,7 @@ async def grid(request: Request, post_id: str):
         resp = await client.get(url)
         return resp.content
 
-    data = await get_data(request, post_id)
+    data = await get_data(post_id)
     if "error" in data:
         return HTTPException(status_code=404, detail="Post not found")
     item = data["shortcode_media"]
