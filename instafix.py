@@ -55,10 +55,12 @@ headers = {
 async def get_data(post_id: str) -> Optional[dict]:
     r = app.state.redis
 
-    data = json.loads(await r.get(post_id))
+    data = await r.get(post_id)
     if not data:
         data = await _get_data(post_id)
         await r.set(post_id, json.dumps(data), ex=24 * 3600)
+    else:
+        data = json.loads(data)
     if "data" in data:
         data = data["data"]
     return data
