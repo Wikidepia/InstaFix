@@ -1,6 +1,6 @@
 # InstaFix
 
-**STATUS: Currently Broken**
+**STATUS: Currently Working**
 
 > Instagram is a trademark of Instagram, Inc. This app is not affiliated with Instagram, Inc.
 
@@ -23,7 +23,6 @@ You could open an [issue](https://github.com/Wikidepia/InstaFix/issues).
 
 ## TODO
 
-- [x] Find a way to get data without cookies & rate limit.
-- [x] Add support for stories.
+- [ ] Find a way to get data without cookies & rate limit.
 - [ ] Bypass "Watch on Instagram" button.
 - [ ] Add multiple third-party website to download videos
