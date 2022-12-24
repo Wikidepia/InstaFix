@@ -27,8 +27,8 @@ if "SENTRY_DSN" in os.environ:
         dsn=os.environ["SENTRY_DSN"],
     )
     print("Sentry initialized.")
-if "IG_PROXY" in os.environ:
-    print("Using proxy:", os.environ["IG_PROXY"])
+if "EMBED_PROXY" in os.environ:
+    print("Using proxy:", os.environ["EMBED_PROXY"])
 if "GRAPHQL_PROXY" in os.environ:
     print("Using GraphQL proxy:", os.environ["GRAPHQL_PROXY"])
 
@@ -175,7 +175,7 @@ async def startup():
         headers=headers,
         follow_redirects=True,
         timeout=120.0,
-        proxies={"all://www.instagram.com": os.environ.get("IG_PROXY")},
+        proxies={"all://www.instagram.com": os.environ.get("EMBED_PROXY")},
     )
     # GraphQL are constantly blocked,
     # it needs to use a different proxy (residential preferred)
@@ -248,7 +248,9 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
         num = num if num else 1
         ctx["image"] = f"/images/{post_id}/{num}"
         ctx["card"] = "summary_large_image"
-    return templates.TemplateResponse("base.html", ctx)
+    return templates.TemplateResponse(
+        "base.html", ctx, headers={"Cache-Control": "max-age=31536000"}
+    )
 
 
 @app.get("/stories/{username}/{post_id}")
@@ -280,7 +282,10 @@ async def videos(request: Request, post_id: str, num: int):
     return StreamingResponse(
         stream.aiter_bytes(1024 * 1024),
         media_type=stream.headers["Content-Type"],
-        headers={"Content-Length": stream.headers["Content-Length"]},
+        headers={
+            "Content-Length": stream.headers["Content-Length"],
+            "Cache-Control": "max-age=31536000",
+        },
         background=BackgroundTask(stream.aclose),
     )
 
@@ -300,7 +305,7 @@ async def images(request: Request, post_id: str, num: int):
 
     media = media.get("node", media)
     image_url = media["display_url"]
-    return RedirectResponse(image_url)
+    return RedirectResponse(image_url, headers={"Cache-Control": "max-age=31536000"})
 
 
 @app.get("/oembed.json")
@@ -332,7 +337,7 @@ async def grid(request: Request, post_id: str):
         return FileResponse(
             f"static/grid:{post_id}.jpg",
             media_type="image/jpeg",
-            headers={"Cache-Control": "public, max-age=31536000"},
+            headers={"Cache-Control": "max-age=31536000"},
         )
 
     async def download_image(url):
@@ -369,7 +374,7 @@ async def grid(request: Request, post_id: str):
     return FileResponse(
         f"static/grid:{post_id}.jpg",
         media_type="image/jpeg",
-        headers={"Cache-Control": "public, max-age=31536000"},
+        headers={"Cache-Control": "max-age=31536000"},
     )
 
 
