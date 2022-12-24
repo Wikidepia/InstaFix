@@ -31,10 +31,6 @@ if "IG_PROXY" in os.environ:
     print("Using proxy:", os.environ["IG_PROXY"])
 if "GRAPHQL_PROXY" in os.environ:
     print("Using GraphQL proxy:", os.environ["GRAPHQL_PROXY"])
-    os.environ["USE_GRAPHQL"] = "1"
-if "GRAPHQL_SESSIONID" in os.environ:
-    print("Using GraphQL sessionid:", os.environ["GRAPHQL_SESSIONID"])
-    os.environ["USE_GRAPHQL"] = "1"
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
@@ -66,7 +62,7 @@ async def get_data(post_id: str) -> Optional[dict]:
     return data
 
 
-@tenacity.retry(stop=tenacity.stop_after_attempt(5), wait=tenacity.wait_fixed(3))
+@tenacity.retry(stop=tenacity.stop_after_attempt(3), wait=tenacity.wait_fixed(1))
 async def _get_data(post_id: str) -> Optional[dict]:
     client = app.state.client
 
@@ -96,11 +92,10 @@ async def _get_data(post_id: str) -> Optional[dict]:
 
     # Get data from HTML
     embed_data = parse_embed(api_resp)
-    use_graphql = os.environ.get("USE_GRAPHQL", False)
     if (
         "error" in embed_data
-        or not embed_data["shortcode_media"]["video_blocked"]
-        or not use_graphql
+        or embed_data["shortcode_media"]["video_blocked"] is False
+        or "GRAPHQL_PROXY" not in os.environ
     ):
         return embed_data
 
@@ -150,7 +145,7 @@ def parse_embed(html: str) -> dict:
 
 
 async def get_gql_cookie(post_id: str) -> dict:
-    client = app.state.cookie_client
+    client = app.state.gql_client
 
     params = {
         "query_hash": "b3055c01b4b222b8a47dc12b090e4e64",
@@ -182,12 +177,13 @@ async def startup():
         timeout=120.0,
         proxies={"all://www.instagram.com": os.environ.get("IG_PROXY")},
     )
-    app.state.cookie_client = httpx.AsyncClient(
+    # GraphQL are constantly blocked,
+    # it needs to use a different proxy (residential preferred)
+    app.state.gql_client = httpx.AsyncClient(
         headers=headers,
         follow_redirects=True,
         timeout=120.0,
         proxies={"all://www.instagram.com": os.environ.get("GRAPHQL_PROXY")},
-        cookies={"sessionid": os.environ.get("GRAPHQL_SESSIONID")},
     )
 
 
