@@ -13,7 +13,7 @@ import sentry_sdk
 import tenacity
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
-                               RedirectResponse, Response)
+                               RedirectResponse)
 from fastapi.templating import Jinja2Templates
 from selectolax.parser import HTMLParser
 
