@@ -367,8 +367,3 @@ async def grid(request: Request, post_id: str):
         f"static/grid:{post_id}.jpg",
         media_type="image/jpeg",
     )
-
-
-@app.get("/robots.txt")
-async def robots():
-    return Response("User-agent: *\nDisallow: /", media_type="text/plain")
