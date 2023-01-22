@@ -22,9 +22,12 @@
 
     {% if image is defined %}
     <meta property="og:image" content="{{ image }}" />
+    {% endif %}
+    {% if width is not none %}
     <meta property="og:image:width" content="{{ width }}" />
     <meta property="og:image:height" content="{{ height }}" />
     {% endif %}
+    
 
     {% if video is defined %}
     <meta property="og:video" content="{{ video }}" />
