@@ -29,6 +29,7 @@ async function stream(request) {
 
     const responseInit = {
         headers: {
+            'Content-Length': response.headers.get('Content-Length'),
             'Content-Type': 'video/mp4',
             'Content-Disposition': 'attachment; filename="video.mp4"'
         }
