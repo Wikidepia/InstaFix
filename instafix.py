@@ -3,6 +3,7 @@ import json
 import os
 import re
 from typing import Optional
+from urllib import parse
 
 import aioredis
 import esprima
@@ -12,10 +13,9 @@ import sentry_sdk
 import tenacity
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
-                               RedirectResponse, Response, StreamingResponse)
+                               RedirectResponse, Response)
 from fastapi.templating import Jinja2Templates
 from selectolax.parser import HTMLParser
-from starlette.background import BackgroundTask
 
 pyvips.cache_set_max(0)
 pyvips.cache_set_max_mem(0)
@@ -31,6 +31,9 @@ if "EMBED_PROXY" in os.environ:
     print("Using proxy:", os.environ["EMBED_PROXY"])
 if "GRAPHQL_PROXY" in os.environ:
     print("Using GraphQL proxy:", os.environ["GRAPHQL_PROXY"])
+if "WORKER_PROXY" not in os.environ:
+    raise Exception("WORKER_PROXY not set")
+print("Using worker proxy:", os.environ["WORKER_PROXY"])
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
@@ -249,7 +252,7 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
         ctx["image"] = f"/images/{post_id}/{num}"
         ctx["card"] = "summary_large_image"
     return templates.TemplateResponse(
-        "base.html", ctx, headers={"Cache-Control": "max-age=31536000"}
+        "base.html", ctx
     )
 
 
@@ -275,19 +278,9 @@ async def videos(request: Request, post_id: str, num: int):
     media = media.get("node", media)
     video_url = media.get("video_url", media["display_url"])
 
-    # Proxy video because Instagram speed limit
-    client = httpx.AsyncClient(headers=headers, follow_redirects=True, timeout=120.0)
-    req = client.build_request("GET", video_url)
-    stream = await client.send(req, stream=True)
-    return StreamingResponse(
-        stream.aiter_bytes(1024 * 1024),
-        media_type=stream.headers["Content-Type"],
-        headers={
-            "Content-Length": stream.headers["Content-Length"],
-            "Cache-Control": "max-age=31536000",
-        },
-        background=BackgroundTask(stream.aclose),
-    )
+    # Proxy video via CF worker because Instagram speed limit
+    params = parse.urlencode({"url": video_url, "referer": "https://instagram.com/"})
+    return RedirectResponse(f"{os.environ['WORKER_PROXY']}?{params}")
 
 
 @app.get("/images/{post_id}/{num}")
@@ -305,7 +298,7 @@ async def images(request: Request, post_id: str, num: int):
 
     media = media.get("node", media)
     image_url = media["display_url"]
-    return RedirectResponse(image_url, headers={"Cache-Control": "max-age=31536000"})
+    return RedirectResponse(image_url)
 
 
 @app.get("/oembed.json")
@@ -337,7 +330,6 @@ async def grid(request: Request, post_id: str):
         return FileResponse(
             f"static/grid:{post_id}.jpg",
             media_type="image/jpeg",
-            headers={"Cache-Control": "max-age=31536000"},
         )
 
     async def download_image(url):
@@ -374,7 +366,6 @@ async def grid(request: Request, post_id: str):
     return FileResponse(
         f"static/grid:{post_id}.jpg",
         media_type="image/jpeg",
-        headers={"Cache-Control": "max-age=31536000"},
     )
 
 
