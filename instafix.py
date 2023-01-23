@@ -269,7 +269,7 @@ async def stories(username: str, post_id: str):
 async def videos(request: Request, post_id: str, num: int):
     data = await get_data(post_id)
     if "error" in data:
-        return FileResponse("static/404.html", status_code=404)
+        return FileResponse("templates/404.html", status_code=404)
     item = data["shortcode_media"]
 
     if "edge_sidecar_to_children" in item:
@@ -290,7 +290,7 @@ async def videos(request: Request, post_id: str, num: int):
 async def images(request: Request, post_id: str, num: int):
     data = await get_data(post_id)
     if "error" in data:
-        return FileResponse("static/404.html", status_code=404)
+        return FileResponse("templates/404.html", status_code=404)
     item = data["shortcode_media"]
 
     if "edge_sidecar_to_children" in item:
@@ -308,7 +308,7 @@ async def images(request: Request, post_id: str, num: int):
 async def oembed(request: Request, post_id: str):
     data = await get_data(post_id)
     if "error" in data:
-        return FileResponse("static/404.html", status_code=404)
+        return FileResponse("templates/404.html", status_code=404)
     item = data["shortcode_media"]
     description = item["edge_media_to_caption"]["edges"] or [{"node": {"text": ""}}]
     description = description[0]["node"]["text"]
@@ -336,12 +336,11 @@ async def grid(request: Request, post_id: str):
         )
 
     async def download_image(url):
-        resp = await client.get(url)
-        return resp.content
+        return (await client.get(url)).content
 
     data = await get_data(post_id)
     if "error" in data:
-        return FileResponse("static/404.html", status_code=404)
+        return FileResponse("templates/404.html", status_code=404)
     item = data["shortcode_media"]
 
     if "edge_sidecar_to_children" in item:
