@@ -5,8 +5,12 @@
     <meta content='text/html; charset=UTF-8' http-equiv='Content-Type' />
     <meta content="#CE0071" name="theme-color" />
 
+    {% if card is defined %}
     <meta name="twitter:card" content="{{ card }}" />
+    {% endif %}
+    {% if username is defined %}
     <meta name="twitter:title" content="@{{ username }}" />
+    {% endif %}
     {% if image is defined %}
     <meta name="twitter:image" content="{{ image }}" />
     {% endif %}

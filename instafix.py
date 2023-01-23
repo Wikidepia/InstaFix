@@ -11,7 +11,7 @@ import httpx
 import pyvips
 import sentry_sdk
 import tenacity
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
 from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
                                RedirectResponse)
 from fastapi.templating import Jinja2Templates
@@ -60,8 +60,7 @@ async def get_data(post_id: str) -> Optional[dict]:
         await r.set(post_id, json.dumps(data), ex=24 * 3600)
     else:
         data = json.loads(data)
-    if "data" in data:
-        data = data["data"]
+    data = data.get("data", data)
     return data
 
 
@@ -102,8 +101,8 @@ async def _get_data(post_id: str) -> Optional[dict]:
     ):
         return embed_data
 
-    # Get data from GraphQL, if video is blocked
-    gql_data = await get_gql_cookie(post_id)
+    # Query data from GraphQL, if video is blocked
+    gql_data = await query_gql(post_id)
     if gql_data.get("status") == "fail":
         return embed_data
     return gql_data["graphql"]
@@ -142,12 +141,12 @@ def parse_embed(html: str) -> dict:
             "node": {"__typename": typename, "display_url": display_url},
             "edge_media_to_caption": {"edges": [{"node": {"text": caption_text}}]},
             "dimensions": {"height": None, "width": None},
-            "video_blocked": tree.css_first(".WatchOnInstagram") is not None,
+            "video_blocked": "WatchOnInstagram" in html,
         }
     }
 
 
-async def get_gql_cookie(post_id: str) -> dict:
+async def query_gql(post_id: str) -> dict:
     client = app.state.gql_client
 
     params = {
@@ -217,7 +216,13 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
 
     data = await get_data(post_id)
     if "error" in data:
-        return HTTPException(status_code=404, detail="Post not found")
+        ctx = {
+            "request": request,
+            "url": post_url,
+            "description": "Sorry, this post isn't available.",
+        }
+        return templates.TemplateResponse("base.html", ctx)
+
     item = data["shortcode_media"]
     if "edge_sidecar_to_children" in item:
         media_lst = item["edge_sidecar_to_children"]["edges"]
@@ -251,9 +256,7 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
         num = num if num else 1
         ctx["image"] = f"/images/{post_id}/{num}"
         ctx["card"] = "summary_large_image"
-    return templates.TemplateResponse(
-        "base.html", ctx
-    )
+    return templates.TemplateResponse("base.html", ctx)
 
 
 @app.get("/stories/{username}/{post_id}")
@@ -266,7 +269,7 @@ async def stories(username: str, post_id: str):
 async def videos(request: Request, post_id: str, num: int):
     data = await get_data(post_id)
     if "error" in data:
-        return HTTPException(status_code=404, detail="Post not found")
+        return FileResponse("static/404.html", status_code=404)
     item = data["shortcode_media"]
 
     if "edge_sidecar_to_children" in item:
@@ -287,7 +290,7 @@ async def videos(request: Request, post_id: str, num: int):
 async def images(request: Request, post_id: str, num: int):
     data = await get_data(post_id)
     if "error" in data:
-        return HTTPException(status_code=404, detail="Post not found")
+        return FileResponse("static/404.html", status_code=404)
     item = data["shortcode_media"]
 
     if "edge_sidecar_to_children" in item:
@@ -305,7 +308,7 @@ async def images(request: Request, post_id: str, num: int):
 async def oembed(request: Request, post_id: str):
     data = await get_data(post_id)
     if "error" in data:
-        return HTTPException(status_code=404, detail="Post not found")
+        return FileResponse("static/404.html", status_code=404)
     item = data["shortcode_media"]
     description = item["edge_media_to_caption"]["edges"] or [{"node": {"text": ""}}]
     description = description[0]["node"]["text"]
@@ -338,7 +341,7 @@ async def grid(request: Request, post_id: str):
 
     data = await get_data(post_id)
     if "error" in data:
-        return HTTPException(status_code=404, detail="Post not found")
+        return FileResponse("static/404.html", status_code=404)
     item = data["shortcode_media"]
 
     if "edge_sidecar_to_children" in item:
