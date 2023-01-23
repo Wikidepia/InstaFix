@@ -358,6 +358,8 @@ async def grid(request: Request, post_id: str):
 
     # Download images and merge them into a single image
     media_imgs = await asyncio.gather(*[download_image(url) for url in media_urls])
+    if media_imgs == []:
+        return FileResponse("templates/404.html", status_code=404)
     media_vips = [
         pyvips.Image.new_from_buffer(img, "", access="sequential") for img in media_imgs
     ]
