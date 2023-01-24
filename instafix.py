@@ -312,7 +312,7 @@ async def oembed(request: Request, post_id: str):
     item = data["shortcode_media"]
     description = item["edge_media_to_caption"]["edges"] or [{"node": {"text": ""}}]
     description = description[0]["node"]["text"]
-    description = description[:200] + "..."
+    description = description[:200] + "..." if len(description) > 200 else description
     return JSONResponse(
         {
             "author_name": description,
