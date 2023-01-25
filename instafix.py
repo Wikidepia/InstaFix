@@ -218,6 +218,7 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
     if "error" in data:
         ctx = {
             "request": request,
+            "title": "InstaFix",
             "url": post_url,
             "description": "Sorry, this post isn't available.",
         }
@@ -239,7 +240,7 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
         "url": post_url,
         "description": description,
         "post_id": post_id,
-        "username": item["owner"]["username"],
+        "title": f"@{item['owner']['username']}",
         "width": media["dimensions"]["width"],
         "height": media["dimensions"]["height"],
     }
