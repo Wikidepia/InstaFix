@@ -1,7 +1,5 @@
 # InstaFix
 
-**PLANNED DOWNTIME: There will be downtime on January 30, 2023, as our [ISP relocates datacenters](https://hostslick.com/clients/announcements/60/HostSlick.com---Datacenter-Re-Location-30.-January-2023.html).**
-
 **STATUS: Currently Working**
 
 > Instagram is a trademark of Instagram, Inc. This app is not affiliated with Instagram, Inc.
