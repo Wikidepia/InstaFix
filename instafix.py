@@ -103,19 +103,12 @@ async def _get_data(post_id: str) -> Optional[dict]:
 
     # Query data from GraphQL, if video is blocked
     # Try 5 times, if all fail, return the embed data
-    tasks = [asyncio.create_task(query_gql(post_id))] * 5
-    for coro in asyncio.as_completed(tasks):
-        gql_data = await coro
-        if gql_data["status"] == "ok":
-            # cancel the rest and stop looping
-            for other_coro in tasks:
-                other_coro.cancel()
-            break
-        else:
-            gql_data = {"status": "fail"}
-    if gql_data.get("status") == "fail":
-        return embed_data
-    return gql_data["data"]
+    tasks = [query_gql(post_id)] * 5
+    results = await asyncio.gather(*tasks)
+    for gql_data in results:
+        if gql_data.get("status") == "ok":
+            return gql_data["data"]
+    return embed_data
 
 
 def parse_embed(html: str) -> dict:
