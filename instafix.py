@@ -102,7 +102,17 @@ async def _get_data(post_id: str) -> Optional[dict]:
         return embed_data
 
     # Query data from GraphQL, if video is blocked
-    gql_data = await query_gql(post_id)
+    # Try 5 times, if all fail, return the embed data
+    tasks = [asyncio.create_task(query_gql(post_id))] * 5
+    for coro in asyncio.as_completed(tasks):
+        gql_data = await coro
+        if gql_data["status"] == "ok":
+            # cancel the rest and stop looping
+            for other_coro in tasks:
+                other_coro.cancel()
+            break
+        else:
+            gql_data = {"status": "fail"}
     if gql_data.get("status") == "fail":
         return embed_data
     return gql_data["data"]
@@ -148,15 +158,17 @@ def parse_embed(html: str) -> dict:
 
 async def query_gql(post_id: str) -> dict:
     client = app.state.gql_client
-
     params = {
         "query_hash": "b3055c01b4b222b8a47dc12b090e4e64",
         "variables": json.dumps({"shortcode": post_id}),
     }
-    response = await client.get(
-        "https://www.instagram.com/graphql/query/", params=params
-    )
-    return response.json()
+    try:
+        response = await client.get(
+            "https://www.instagram.com/graphql/query/", params=params
+        )
+        return response.json()
+    except httpx.ReadTimeout:
+        return {"status": "fail"}
 
 
 def mediaid_to_code(media_id):
@@ -184,7 +196,7 @@ async def startup():
     app.state.gql_client = httpx.AsyncClient(
         headers=headers,
         follow_redirects=True,
-        timeout=120.0,
+        timeout=5.0,
         proxies={"all://www.instagram.com": os.environ.get("GRAPHQL_PROXY")},
     )
 
