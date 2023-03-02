@@ -331,33 +331,45 @@ async def oembed(request: Request, post_id: str):
 @app.get("/grid/{post_id}")
 async def grid(request: Request, post_id: str):
     client = request.app.state.client
-    file_path = f"static/grid:{post_id}.jpg"
-    if os.path.exists(file_path):
-        return FileResponse(file_path, media_type="image/jpeg")
+    if os.path.exists(f"static/grid:{post_id}.jpg"):
+        return FileResponse(
+            f"static/grid:{post_id}.jpg",
+            media_type="image/jpeg",
+        )
+
+    async def download_image(url):
+        return (await client.get(url)).content
 
     data = await get_data(post_id)
     if "error" in data:
         return FileResponse("templates/404.html", status_code=404)
-
     item = data["shortcode_media"]
-    media_lst = item.get("edge_sidecar_to_children", {"edges": [item]})["edges"]
+
+    if "edge_sidecar_to_children" in item:
+        media_lst = item["edge_sidecar_to_children"]["edges"]
+    else:
+        media_lst = [item]
+
     is_image = lambda x: x in ["GraphImage", "StoryImage", "StoryVideo"]
-    media_urls = list(
-        filter(lambda m: is_image(m.get("node", m)["__typename"]), media_lst)
-    )[:4]
+    # Limit to 4 images, Discord only show 4 images originally
+    media_urls = [
+        m.get("node", m)["display_url"]
+        for m in media_lst
+        if is_image(m.get("node", m)["__typename"])
+    ][:4]
 
     # Download images and merge them into a single image
-    async def download_image(url):
-        return (await client.get(url)).content
-
     media_imgs = await asyncio.gather(*[download_image(url) for url in media_urls])
     if media_imgs == []:
         return FileResponse("templates/404.html", status_code=404)
-
     media_vips = [
         pyvips.Image.new_from_buffer(img, "", access="sequential") for img in media_imgs
     ]
     accross = min(len(media_imgs), 2)
     grid_img = pyvips.Image.arrayjoin(media_vips, across=accross, shim=10)
-    grid_img.write_to_file(file_path)
-    return FileResponse(file_path, media_type="image/jpeg")
+    grid_img.write_to_file(f"static/grid:{post_id}.jpg")
+
+    return FileResponse(
+        f"static/grid:{post_id}.jpg",
+        media_type="image/jpeg",
+    )
