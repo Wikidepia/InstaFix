@@ -205,6 +205,7 @@ def root():
 @app.get("/p/{post_id}")
 @app.get("/p/{post_id}/{num}")
 @app.get("/reel/{post_id}")
+@app.get("/reels/{post_id}")
 @app.get("/tv/{post_id}")
 async def read_item(request: Request, post_id: str, num: Optional[int] = None):
     post_url = f"https://instagram.com/p/{post_id}"
