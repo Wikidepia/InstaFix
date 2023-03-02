@@ -105,7 +105,7 @@ async def _get_data(post_id: str) -> Optional[dict]:
     gql_data = await query_gql(post_id)
     if gql_data.get("status") == "fail":
         return embed_data
-    return gql_data["graphql"]
+    return gql_data["data"]
 
 
 def parse_embed(html: str) -> dict:
