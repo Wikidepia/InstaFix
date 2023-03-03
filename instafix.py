@@ -178,10 +178,12 @@ async def startup():
     app.state.redis = await aioredis.from_url(
         "redis://localhost:6379", encoding="utf-8", decode_responses=True
     )
+    limits = httpx.Limits(max_keepalive_connections=None, max_connections=None)
     app.state.client = httpx.AsyncClient(
         headers=headers,
         follow_redirects=True,
         timeout=120.0,
+        limits=limits,
         proxies={"all://www.instagram.com": os.environ.get("EMBED_PROXY")},
     )
     # GraphQL are constantly blocked,
@@ -190,6 +192,7 @@ async def startup():
         headers=headers,
         follow_redirects=True,
         timeout=5.0,
+        limits=limits,
         proxies={"all://www.instagram.com": os.environ.get("GRAPHQL_PROXY")},
     )
 
