@@ -66,13 +66,16 @@ async def get_data(post_id: str) -> Optional[dict]:
 
 @tenacity.retry(stop=tenacity.stop_after_attempt(3), wait=tenacity.wait_fixed(1))
 async def _get_data(post_id: str) -> Optional[dict]:
-    client = app.state.client
-
-    api_resp = (
-        await client.get(
-            f"https://www.instagram.com/p/{post_id}/embed/captioned",
-        )
-    ).text
+    with httpx.AsyncClient(
+        headers=headers,
+        follow_redirects=True,
+        proxies={"all://www.instagram.com": os.environ.get("EMBED_PROXY")},
+    ) as client:
+        api_resp = (
+            await client.get(
+                f"https://www.instagram.com/p/{post_id}/embed/captioned",
+            )
+        ).text
 
     # additionalDataLoaded
     data = re.findall(
@@ -150,16 +153,20 @@ def parse_embed(html: str) -> dict:
 
 
 async def query_gql(post_id: str) -> dict:
-    client = app.state.gql_client
     params = {
         "query_hash": "b3055c01b4b222b8a47dc12b090e4e64",
         "variables": json.dumps({"shortcode": post_id}),
     }
     try:
-        response = await client.get(
-            "https://www.instagram.com/graphql/query/", params=params
-        )
-        return response.json()
+        with httpx.AsyncClient(
+            headers=headers,
+            follow_redirects=True,
+            proxies={"all://www.instagram.com": os.environ.get("GRAPHQL_PROXY")},
+        ) as client:
+            response = await client.get(
+                "https://www.instagram.com/graphql/query/", params=params
+            )
+            return response.json()
     except httpx.ReadTimeout:
         return {"status": "fail"}
 
@@ -178,29 +185,10 @@ async def startup():
     app.state.redis = await aioredis.from_url(
         "redis://localhost:6379", encoding="utf-8", decode_responses=True
     )
-    limits = httpx.Limits(max_keepalive_connections=None, max_connections=None)
-    app.state.client = httpx.AsyncClient(
-        headers=headers,
-        follow_redirects=True,
-        timeout=120.0,
-        limits=limits,
-        proxies={"all://www.instagram.com": os.environ.get("EMBED_PROXY")},
-    )
-    # GraphQL are constantly blocked,
-    # it needs to use a different proxy (residential preferred)
-    app.state.gql_client = httpx.AsyncClient(
-        headers=headers,
-        follow_redirects=True,
-        timeout=5.0,
-        limits=limits,
-        proxies={"all://www.instagram.com": os.environ.get("GRAPHQL_PROXY")},
-    )
-
 
 @app.on_event("shutdown")
 async def shutdown():
     await app.state.redis.close()
-    await app.state.client.aclose()
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -338,7 +326,6 @@ async def oembed(request: Request, post_id: str):
 
 @app.get("/grid/{post_id}")
 async def grid(request: Request, post_id: str):
-    client = request.app.state.client
     if os.path.exists(f"static/grid:{post_id}.jpg"):
         return FileResponse(
             f"static/grid:{post_id}.jpg",
@@ -346,7 +333,8 @@ async def grid(request: Request, post_id: str):
         )
 
     async def download_image(url):
-        return (await client.get(url)).content
+        with httpx.AsyncClient() as client:
+            return (await client.get(url)).content
 
     data = await get_data(post_id)
     if "error" in data:
