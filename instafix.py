@@ -66,7 +66,7 @@ async def get_data(post_id: str) -> Optional[dict]:
 
 @tenacity.retry(stop=tenacity.stop_after_attempt(3), wait=tenacity.wait_fixed(1))
 async def _get_data(post_id: str) -> Optional[dict]:
-    with httpx.AsyncClient(
+    async with httpx.AsyncClient(
         headers=headers,
         follow_redirects=True,
         proxies={"all://www.instagram.com": os.environ.get("EMBED_PROXY")},
@@ -158,7 +158,7 @@ async def query_gql(post_id: str) -> dict:
         "variables": json.dumps({"shortcode": post_id}),
     }
     try:
-        with httpx.AsyncClient(
+        async with httpx.AsyncClient(
             headers=headers,
             follow_redirects=True,
             proxies={"all://www.instagram.com": os.environ.get("GRAPHQL_PROXY")},
@@ -333,7 +333,7 @@ async def grid(request: Request, post_id: str):
         )
 
     async def download_image(url):
-        with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(headers=headers) as client:
             return (await client.get(url)).content
 
     data = await get_data(post_id)
