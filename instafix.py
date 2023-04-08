@@ -102,12 +102,9 @@ async def _get_data(post_id: str) -> Optional[dict]:
         return embed_data
 
     # Query data from GraphQL, if video is blocked
-    # Try 5 times, if all fail, return the embed data
-    tasks = [query_gql(post_id)] * 5
-    results = await asyncio.gather(*tasks)
-    for gql_data in results:
-        if gql_data.get("status") == "ok":
-            return gql_data["data"]
+    gql_data = await query_gql(post_id)
+    if gql_data.get("status") == "ok":
+        return gql_data["data"]
     return embed_data
 
 
