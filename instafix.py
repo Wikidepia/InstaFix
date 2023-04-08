@@ -218,7 +218,7 @@ def root():
 async def read_item(request: Request, post_id: str, num: Optional[int] = None):
     post_url = f"https://instagram.com/p/{post_id}"
     if not re.search(
-        r"bot|facebook|embed|got|firefox\/92|curl|wget",
+        r"bot|facebook|embed|got|firefox\/92|firefox\/38|curl|wget|go-http|yahoo|generator|whatsapp|preview|link|proxy|vkshare|images|analyzer|index|crawl|spider|python|cfnetwork|node",
         request.headers.get("User-Agent", "").lower(),
     ):
         return RedirectResponse(post_url)
