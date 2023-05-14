@@ -94,17 +94,23 @@ async def _get_data(post_id: str) -> Optional[dict]:
 
     # Get data from HTML
     embed_data = parse_embed(api_resp)
-    if (
-        "error" in embed_data
-        or embed_data["shortcode_media"]["video_blocked"] is False
-        or "GRAPHQL_PROXY" not in os.environ
-    ):
+    if "error" in embed_data or embed_data["shortcode_media"]["video_blocked"] is False:
+        return embed_data
+
+    # Get data from JSON-LD if video is blocked
+    json_ld = await parse_json_ld(post_id)
+    if json_ld.get("video"):
+        embed_data["shortcode_media"]["node"] = {
+            "__typename": "GraphVideo",
+            "display_url": json_ld["video"][0]["contentUrl"],
+        }
         return embed_data
 
     # Query data from GraphQL, if video is blocked
-    gql_data = await query_gql(post_id)
-    if gql_data.get("status") == "ok":
-        return gql_data["data"]
+    if "GRAPHQL_PROXY" in os.environ:
+        gql_data = await query_gql(post_id)
+        if gql_data.get("status") == "ok":
+            return gql_data["data"]
     return embed_data
 
 
@@ -144,6 +150,16 @@ def parse_embed(html: str) -> dict:
             "video_blocked": "WatchOnInstagram" in html,
         }
     }
+
+
+async def parse_json_ld(post_id: str) -> dict:
+    client = app.state.client
+    resp = await client.get(f"https://www.instagram.com/p/{post_id}/")
+    tree = HTMLParser(resp.text)
+    json_ld = tree.css_first("script[type='application/ld+json']")
+    if json_ld:
+        return json.loads(json_ld.text())
+    return {}
 
 
 async def query_gql(post_id: str) -> dict:
