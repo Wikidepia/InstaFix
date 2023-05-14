@@ -80,7 +80,7 @@ async def _get_data(post_id: str) -> Optional[dict]:
     )
     if data:
         gql_data = json.loads(data[0])
-        if gql_data:
+        if gql_data and gql_data.get("shortcode_media"):
             return gql_data
 
     # TimeSliceImpl
