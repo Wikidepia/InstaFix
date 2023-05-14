@@ -99,11 +99,27 @@ async def _get_data(post_id: str) -> Optional[dict]:
 
     # Get data from JSON-LD if video is blocked
     json_ld = await parse_json_ld(post_id)
-    if json_ld.get("video"):
-        embed_data["shortcode_media"]["node"] = {
-            "__typename": "GraphVideo",
-            "display_url": json_ld["video"][0]["contentUrl"],
-        }
+    video_data = json_ld.get("video")
+    if video_data:
+        if len(video_data) == 1:
+            embed_data["shortcode_media"]["node"] = {
+                "__typename": "GraphVideo",
+                "display_url": video_data[0]["contentUrl"],
+            }
+        else:
+            embed_data["shortcode_media"]["edge_sidecar_to_children"] = {
+                "edges": [
+                    {
+                        "node": {
+                            "__typename": "GraphVideo",
+                            "display_url": video["contentUrl"],
+                        }
+                    }
+                    for video in video_data
+                ]
+            }
+
+        embed_data["shortcode_media"]["video_blocked"] = False
         return embed_data
 
     # Query data from GraphQL, if video is blocked
