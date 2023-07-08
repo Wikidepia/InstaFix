@@ -99,6 +99,8 @@ async def _get_data(post_id: str) -> Optional[dict]:
 
     # Get data from JSON-LD if video is blocked
     json_ld = await parse_json_ld(post_id)
+    if type(json_ld) == list:
+        json_ld = json_ld[0]
     video_data = json_ld.get("video")
     if video_data:
         if len(video_data) == 1:
