@@ -196,7 +196,7 @@ async def query_gql(post_id: str) -> dict:
         return {"status": "fail"}
 
 
-def mediaid_to_code(media_id):
+def mediaid_to_code(media_id: int):
     alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
     short_code = ""
     while media_id > 0:
@@ -300,6 +300,8 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
 
 @app.get("/stories/{username}/{post_id}")
 async def stories(username: str, post_id: str):
+    if not post_id.isdigit():
+        return FileResponse("templates/404.html", status_code=404)
     post_code = mediaid_to_code(int(post_id))
     return RedirectResponse(f"/p/{post_code}")
 
