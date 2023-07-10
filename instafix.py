@@ -60,7 +60,7 @@ async def get_data(post_id: str) -> Optional[dict]:
         data = await _get_data(post_id)
         c[post_id] = {"content": data, "expire": time.time() + (24 * 60 * 60)}
     else:
-        data = json.loads(data)["content"]
+        data = data["content"]
     data = data.get("data", data)
     return data
 
