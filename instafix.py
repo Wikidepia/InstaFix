@@ -2,10 +2,10 @@ import asyncio
 import json
 import os
 import re
+import time
 from typing import Optional
 from urllib import parse
 
-import aioredis
 import esprima
 import httpx
 import pyvips
@@ -16,6 +16,7 @@ from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
                                RedirectResponse)
 from fastapi.templating import Jinja2Templates
 from selectolax.parser import HTMLParser
+from sqlitedict import SqliteDict
 
 pyvips.cache_set_max(0)
 pyvips.cache_set_max_mem(0)
@@ -52,14 +53,14 @@ headers = {
 
 
 async def get_data(post_id: str) -> Optional[dict]:
-    r = app.state.redis
+    c = app.state.cache
 
-    data = await r.get(post_id)
-    if not data:
+    data = c.get(post_id)
+    if not data or data["expire"] < time.time():
         data = await _get_data(post_id)
-        await r.set(post_id, json.dumps(data), ex=24 * 3600)
+        c[post_id] = {"content": data, "expire": time.time() + (24 * 60 * 60)}
     else:
-        data = json.loads(data)
+        data = json.loads(data)["content"]
     data = data.get("data", data)
     return data
 
@@ -206,9 +207,7 @@ def mediaid_to_code(media_id):
 
 @app.on_event("startup")
 async def startup():
-    app.state.redis = await aioredis.from_url(
-        "redis://localhost:6379", encoding="utf-8", decode_responses=True
-    )
+    app.state.cache = SqliteDict("cache.sqlite", autocommit=True)
     limits = httpx.Limits(max_keepalive_connections=None, max_connections=None)
     app.state.client = httpx.AsyncClient(
         headers=headers,
@@ -230,7 +229,6 @@ async def startup():
 
 @app.on_event("shutdown")
 async def shutdown():
-    await app.state.redis.close()
     await app.state.client.aclose()
 
 

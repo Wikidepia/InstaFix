@@ -8,7 +8,6 @@ authors = ["Akmal <magchuz@pm.me>"]
 python = "^3.8"
 gunicorn = "^20.1.0"
 uvicorn = {extras = ["standard"], version = "^0.17.6"}
-aioredis = "^2.0.1"
 fastapi = "^0.78.0"
 Jinja2 = "^3.1.2"
 sentry-sdk = "^1.6.0"
@@ -17,6 +16,7 @@ httpx = "^0.23.0"
 selectolax = "^0.3.8"
 esprima = "^4.0.1"
 tenacity = "^8.1.0"
+sqlitedict = "^2.1.0"
 
 [tool.poetry.dev-dependencies]
 
