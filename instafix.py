@@ -374,10 +374,10 @@ async def oembed(request: Request, post_id: str):
 @app.get("/grid/{post_id}")
 async def grid(request: Request, post_id: str):
     client = request.app.state.client
-    if os.path.exists(f"static/grid:{post_id}.jpg"):
+    if os.path.exists(f"static/grid:{post_id}.webp"):
         return FileResponse(
-            f"static/grid:{post_id}.jpg",
-            media_type="image/jpeg",
+            f"static/grid:{post_id}.webp",
+            media_type="image/webp",
         )
 
     async def download_image(url):
@@ -410,9 +410,9 @@ async def grid(request: Request, post_id: str):
     ]
     accross = min(len(media_imgs), 2)
     grid_img = pyvips.Image.arrayjoin(media_vips, across=accross, shim=10)
-    grid_img.write_to_file(f"static/grid:{post_id}.jpg")
+    grid_img.write_to_file(f"static/grid:{post_id}.webp")
 
     return FileResponse(
-        f"static/grid:{post_id}.jpg",
-        media_type="image/jpeg",
+        f"static/grid:{post_id}.webp",
+        media_type="image/webp",
     )
