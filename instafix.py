@@ -5,6 +5,7 @@ import re
 import time
 from typing import Optional
 from urllib import parse
+import random
 
 import esprima
 import httpx
@@ -326,7 +327,8 @@ async def videos(request: Request, post_id: str, num: int):
 
     # Proxy video via CF worker because Instagram speed limit
     params = parse.urlencode({"url": video_url, "referer": "https://instagram.com/"})
-    return RedirectResponse(f"{os.environ['WORKER_PROXY']}?{params}")
+    wproxy = random.choice(os.environ["WORKER_PROXY"].split(","))
+    return RedirectResponse(f"{wproxy}?{params}")
 
 
 @app.get("/images/{post_id}/{num}")
