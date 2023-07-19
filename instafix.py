@@ -27,6 +27,7 @@ os.makedirs("static", exist_ok=True)
 if "SENTRY_DSN" in os.environ:
     sentry_sdk.init(
         dsn=os.environ["SENTRY_DSN"],
+        sample_rate=0.5,
     )
     print("Sentry initialized.")
 if "EMBED_PROXY" in os.environ:
