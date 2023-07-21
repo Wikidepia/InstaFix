@@ -1,11 +1,11 @@
 import asyncio
 import json
 import os
+import random
 import re
 import time
 from typing import Optional
 from urllib import parse
-import random
 
 import esprima
 import httpx
