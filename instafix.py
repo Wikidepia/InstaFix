@@ -24,7 +24,6 @@ pyvips.cache_set_max_mem(0)
 pyvips.cache_set_max_files(0)
 os.makedirs("static", exist_ok=True)
 
-os.environ["WORKER_PROXY"] = ""
 if "SENTRY_DSN" in os.environ:
     sentry_sdk.init(
         dsn=os.environ["SENTRY_DSN"],
