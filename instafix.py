@@ -281,6 +281,7 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
     typename = media.get("node", media)["__typename"]
     description = item["edge_media_to_caption"]["edges"] or [{"node": {"text": ""}}]
     description = description[0]["node"]["text"]
+    description = description[:200] + "..." if len(description) > 200 else description
 
     ctx = {
         "request": request,
