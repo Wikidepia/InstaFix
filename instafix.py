@@ -268,7 +268,7 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
             "url": post_url,
             "description": "Sorry, this post isn't available.",
         }
-        return templates.TemplateResponse("base.html", ctx)
+        return templates.TemplateResponse("base.html", ctx, status_code=404)
 
     item = data["shortcode_media"]
     if "edge_sidecar_to_children" in item:
