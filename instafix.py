@@ -5,7 +5,7 @@ import random
 import re
 import time
 from typing import Optional
-from urllib import parse
+from urllib.parse import urlencode, urljoin
 
 import esprima
 import httpx
@@ -24,6 +24,7 @@ pyvips.cache_set_max_mem(0)
 pyvips.cache_set_max_files(0)
 os.makedirs("static", exist_ok=True)
 
+os.environ["WORKER_PROXY"] = ""
 if "SENTRY_DSN" in os.environ:
     sentry_sdk.init(
         dsn=os.environ["SENTRY_DSN"],
@@ -246,8 +247,14 @@ def root():
 @app.get("/reel/{post_id}")
 @app.get("/reels/{post_id}")
 @app.get("/tv/{post_id}")
+@app.get("/stories/{username}/{post_id}")
 async def read_item(request: Request, post_id: str, num: Optional[int] = None):
-    post_url = f"https://instagram.com/p/{post_id}"
+    if "/stories/" in request.url.path:
+        if not post_id.isdigit():
+            return FileResponse("templates/404.html", status_code=404)
+        post_id = mediaid_to_code(int(post_id))
+
+    post_url = urljoin("https://www.instagram.com/", request.url.path)
     if not re.search(
         r"bot|facebook|embed|got|firefox\/92|firefox\/38|curl|wget|go-http|yahoo|generator|whatsapp|preview|link|proxy|vkshare|images|analyzer|index|crawl|spider|python|cfnetwork|node",
         request.headers.get("User-Agent", "").lower(),
@@ -300,14 +307,6 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
     return templates.TemplateResponse("base.html", ctx)
 
 
-@app.get("/stories/{username}/{post_id}")
-async def stories(username: str, post_id: str):
-    if not post_id.isdigit():
-        return FileResponse("templates/404.html", status_code=404)
-    post_code = mediaid_to_code(int(post_id))
-    return RedirectResponse(f"/p/{post_code}")
-
-
 @app.get("/videos/{post_id}/{num}")
 async def videos(request: Request, post_id: str, num: int):
     data = await get_data(post_id)
@@ -327,7 +326,7 @@ async def videos(request: Request, post_id: str, num: int):
     video_url = media.get("video_url", media["display_url"])
 
     # Proxy video via CF worker because Instagram speed limit
-    params = parse.urlencode({"url": video_url, "referer": "https://instagram.com/"})
+    params = urlencode({"url": video_url, "referer": "https://instagram.com/"})
     wproxy = random.choice(os.environ["WORKER_PROXY"].split(","))
     return RedirectResponse(f"{wproxy}?{params}")
 
