@@ -34,9 +34,8 @@ if "EMBED_PROXY" in os.environ:
     print("Using proxy:", os.environ["EMBED_PROXY"])
 if "GRAPHQL_PROXY" in os.environ:
     print("Using GraphQL proxy:", os.environ["GRAPHQL_PROXY"])
-if "WORKER_PROXY" not in os.environ:
-    raise Exception("WORKER_PROXY not set")
-print("Using worker proxy:", os.environ["WORKER_PROXY"])
+if "WORKER_PROXY" in os.environ:
+    print("Using worker proxy:", os.environ["WORKER_PROXY"])
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
@@ -356,9 +355,12 @@ async def videos(request: Request, post_id: str, num: int):
     video_url = media.get("video_url", media["display_url"])
 
     # Proxy video via CF worker because Instagram speed limit
-    params = urlencode({"url": video_url, "referer": "https://instagram.com/"})
-    wproxy = random.choice(os.environ["WORKER_PROXY"].split(","))
-    return RedirectResponse(f"{wproxy}?{params}")
+    worker_proxy = os.environ.get("WORKER_PROXY")
+    if worker_proxy:
+        params = urlencode({"url": video_url, "referer": "https://instagram.com/"})
+        wproxy = random.choice(worker_proxy.split(","))
+        video_url = f"{wproxy}?{params}"
+    return RedirectResponse(video_url)
 
 
 @app.get("/images/{post_id}/{num}")
