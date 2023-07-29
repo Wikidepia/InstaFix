@@ -302,6 +302,8 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
     item = data["shortcode_media"]
     if "edge_sidecar_to_children" in item:
         media_lst = item["edge_sidecar_to_children"]["edges"]
+        if num > len(media_lst):
+            return FileResponse("templates/404.html", status_code=404)
         media = (media_lst[num - 1 if num else 0])["node"]
     else:
         media = item
