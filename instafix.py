@@ -276,7 +276,7 @@ def root():
 @app.get("/reels/{post_id}")
 @app.get("/tv/{post_id}")
 @app.get("/stories/{username}/{post_id}")
-async def read_item(request: Request, post_id: str, num: Optional[int] = 1):
+async def read_item(request: Request, post_id: str, num: Optional[int] = None):
     if "/stories/" in request.url.path:
         if not post_id.isdigit():
             return FileResponse("templates/404.html", status_code=404)
@@ -302,7 +302,7 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = 1):
     item = data["shortcode_media"]
     if "edge_sidecar_to_children" in item:
         media_lst = item["edge_sidecar_to_children"]["edges"]
-        if num > len(media_lst):
+        if isinstance(num, int) and num > len(media_lst):
             return FileResponse("templates/404.html", status_code=404)
         media = (media_lst[num - 1 if num else 0])["node"]
     else:
