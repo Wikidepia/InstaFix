@@ -15,7 +15,7 @@ import tenacity
 from diskcache import Cache
 from fastapi import FastAPI, Request
 from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
-                               RedirectResponse)
+                               PlainTextResponse, RedirectResponse)
 from fastapi.templating import Jinja2Templates
 from selectolax.parser import HTMLParser
 
@@ -238,7 +238,7 @@ def mediaid_to_code(media_id: int):
 async def startup():
     app.state.cache = Cache(
         "cache", size_limit=int(5e9), eviction_policy="least-recently-used"
-    ) # Limit cache to 5GB
+    )  # Limit cache to 5GB
     limits = httpx.Limits(max_keepalive_connections=None, max_connections=None)
     app.state.client = httpx.AsyncClient(
         headers=headers,
@@ -452,3 +452,8 @@ async def grid(request: Request, post_id: str):
         f"static/grid:{post_id}.webp",
         media_type="image/webp",
     )
+
+
+@app.get("/health", response_class=PlainTextResponse)
+def healthcheck():
+    return "200"
