@@ -276,7 +276,7 @@ def root():
 @app.get("/reels/{post_id}")
 @app.get("/tv/{post_id}")
 @app.get("/stories/{username}/{post_id}")
-async def read_item(request: Request, post_id: str, num: Optional[int] = None):
+async def read_item(request: Request, post_id: str, num: Optional[int] = 1):
     if "/stories/" in request.url.path:
         if not post_id.isdigit():
             return FileResponse("templates/404.html", status_code=404)
