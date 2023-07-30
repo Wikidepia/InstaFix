@@ -157,6 +157,18 @@ files = [
 ]
 
 [[package]]
+name = "diskcache"
+version = "5.6.1"
+description = "Disk Cache -- Disk and file backed persistent cache."
+category = "main"
+optional = false
+python-versions = ">=3"
+files = [
+    {file = "diskcache-5.6.1-py3-none-any.whl", hash = "sha256:558c6a2d5d7c721bb00e40711803d6804850c9f76c426ed81ecc627fe9d2ce2d"},
+    {file = "diskcache-5.6.1.tar.gz", hash = "sha256:e4c978532feff5814c4cc00fe1e11e40501985946643d73220d41ee7737c72c3"},
+]
+
+[[package]]
 name = "esprima"
 version = "4.0.1"
 description = "ECMAScript parsing infrastructure for multipurpose analysis in Python"
@@ -743,17 +755,6 @@ files = [
 ]
 
 [[package]]
-name = "sqlitedict"
-version = "2.1.0"
-description = "Persistent dict in Python, backed up by sqlite3 and pickle, multithread-safe."
-category = "main"
-optional = false
-python-versions = "*"
-files = [
-    {file = "sqlitedict-2.1.0.tar.gz", hash = "sha256:03d9cfb96d602996f1d4c2db2856f1224b96a9c431bdd16e78032a72940f9e8c"},
-]
-
-[[package]]
 name = "starlette"
 version = "0.19.1"
 description = "The little ASGI library that shines."
@@ -987,4 +988,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "7c70bf827f1ba51666fb601a1715634d1954090965c2c20b43f09955548a6bd8"
+content-hash = "232c8d9a4b62d4d2f35c5fe8ce55c9aae1de3e3506b0abb67524c2f2503bc12f"

@@ -16,7 +16,7 @@ httpx = "^0.23.0"
 selectolax = "^0.3.8"
 esprima = "^4.0.1"
 tenacity = "^8.1.0"
-sqlitedict = "^2.1.0"
+diskcache = "^5.6.1"
 
 [tool.poetry.dev-dependencies]
 

@@ -12,12 +12,12 @@ import httpx
 import pyvips
 import sentry_sdk
 import tenacity
+from diskcache import Cache
 from fastapi import FastAPI, Request
 from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
                                RedirectResponse)
 from fastapi.templating import Jinja2Templates
 from selectolax.parser import HTMLParser
-from sqlitedict import SqliteDict
 
 pyvips.cache_set_max(0)
 pyvips.cache_set_max_mem(0)
@@ -54,14 +54,12 @@ headers = {
 
 
 async def get_data(post_id: str) -> Optional[dict]:
-    c = app.state.cache
+    cache = app.state.cache
 
-    data = c.get(post_id)
-    if not data or data["expire"] < time.time():
+    data = cache.get(post_id)
+    if not data:
         data = await _get_data(post_id)
-        c[post_id] = {"content": data, "expire": time.time() + (24 * 60 * 60)}
-    else:
-        data = data["content"]
+        cache.set(post_id, data, expire=24 * 60 * 60)
     data = data.get("data", data)
     return data
 
@@ -238,7 +236,9 @@ def mediaid_to_code(media_id: int):
 
 @app.on_event("startup")
 async def startup():
-    app.state.cache = SqliteDict("cache.sqlite", autocommit=True)
+    app.state.cache = Cache(
+        "cache", size_limit=int(5e9), eviction_policy="least-recently-used"
+    ) # Limit cache to 5GB
     limits = httpx.Limits(max_keepalive_connections=None, max_connections=None)
     app.state.client = httpx.AsyncClient(
         headers=headers,
