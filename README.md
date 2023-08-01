@@ -23,6 +23,7 @@ You could open an [issue](https://github.com/Wikidepia/InstaFix/issues).
 
 ## TODO
 
+- [ ] Find a way to cram this project to small (1C2G) VPS with sane CPU usage.
 - [ ] Find a way to get data without cookies & rate limit.
 - [ ] Bypass "Watch on Instagram" button.
 - [ ] Add multiple third-party website to download videos
