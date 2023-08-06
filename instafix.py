@@ -165,13 +165,12 @@ async def parse_json_ld(post_id: str) -> dict:
     if isinstance(json_ld, list):
         json_ld = json_ld[0]
 
-    # Get embed_data from JSON-LD if embed is blocked
+    # Weird bug, need to use isinstance :shrug:
     username = "unknown"
     if isinstance(json_ld["author"], NoneType):
         username = json_ld["author"].get("identifier", {}).get("value", "unknown")
 
     caption = json_ld.get("articleBody", "")
-
     ld_data = {
         "shortcode_media": {
             "owner": {"username": username},
