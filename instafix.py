@@ -14,7 +14,7 @@ import sentry_sdk
 import tenacity
 from diskcache import Cache
 from fastapi import FastAPI, Request
-from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
+from fastapi.responses import (FileResponse, HTMLResponse, ORJSONResponse,
                                PlainTextResponse, RedirectResponse)
 from fastapi.templating import Jinja2Templates
 from selectolax.lexbor import LexborHTMLParser
@@ -397,7 +397,7 @@ async def oembed(request: Request, post_id: str):
     description = item["edge_media_to_caption"]["edges"] or [{"node": {"text": ""}}]
     description = description[0]["node"]["text"]
     description = description[:200] + "..." if len(description) > 200 else description
-    return JSONResponse(
+    return ORJSONResponse(
         {
             "author_name": description,
             "author_url": f"https://instagram.com/p/{post_id}",
