@@ -165,7 +165,9 @@ async def parse_json_ld(post_id: str) -> dict:
         json_ld = json_ld[0]
 
     # Get embed_data from JSON-LD if embed is blocked
-    username = json_ld["author"]["identifier"]["value"]
+    author = json_ld["author"] or {}
+    username = author.get("identifier", {}).get("value", "@unknown")
+
     caption = json_ld.get("articleBody", "")
 
     ld_data = {
