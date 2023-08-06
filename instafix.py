@@ -24,6 +24,7 @@ pyvips.cache_set_max_mem(0)
 pyvips.cache_set_max_files(0)
 os.makedirs("static", exist_ok=True)
 
+NoneType = type(None)
 if "SENTRY_DSN" in os.environ:
     sentry_sdk.init(
         dsn=os.environ["SENTRY_DSN"],
@@ -165,8 +166,9 @@ async def parse_json_ld(post_id: str) -> dict:
         json_ld = json_ld[0]
 
     # Get embed_data from JSON-LD if embed is blocked
-    author = json_ld["author"] or {}
-    username = author.get("identifier", {}).get("value", "@unknown")
+    username = "unknown"
+    if isinstance(json_ld["author"], NoneType):
+        username = json_ld["author"].get("identifier", {}).get("value", "unknown")
 
     caption = json_ld.get("articleBody", "")
 
