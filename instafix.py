@@ -17,7 +17,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
                                PlainTextResponse, RedirectResponse)
 from fastapi.templating import Jinja2Templates
-from selectolax.parser import HTMLParser
+from selectolax.lexbor import LexborHTMLParser
 
 pyvips.cache_set_max(0)
 pyvips.cache_set_max_mem(0)
@@ -112,7 +112,7 @@ async def _get_data(post_id: str) -> Optional[dict]:
 
 
 def parse_embed(html: str) -> dict:
-    tree = HTMLParser(html)
+    tree = LexborHTMLParser(html)
     typename = "GraphImage"
     display_url = tree.css_first(".EmbeddedMediaImage")
     if not display_url:
@@ -156,7 +156,7 @@ async def parse_json_ld(post_id: str) -> dict:
     if resp.status_code != 200:
         return {"error": "Not found"}
 
-    tree = HTMLParser(resp.text)
+    tree = LexborHTMLParser(resp.text)
     json_ld = tree.css_first("script[type='application/ld+json']")
     if not json_ld:
         return {"error": "Server is blocked from Instagram"}
