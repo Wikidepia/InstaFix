@@ -440,6 +440,9 @@ async def grid(request: Request, post_id: str):
         if is_image(m.get("node", m)["__typename"])
     ][:4]
 
+    if len(media_urls) == 1:
+        return RedirectResponse(media_urls[0])
+
     # Download images and merge them into a single image
     media_imgs = await asyncio.gather(*[download_image(url) for url in media_urls])
     if media_imgs == []:
