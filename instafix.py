@@ -276,7 +276,7 @@ def root():
 async def read_item(request: Request, post_id: str, num: Optional[int] = None):
     if b"/stories/" in request.url.path:
         if not post_id.isdigit():
-            return file("templates/404.html")
+            return file("templates/404.html", content_type="text/html")
         post_id = mediaid_to_code(int(post_id))
 
     user_agent = request.headers.get_first(b"User-Agent") or b""
@@ -300,7 +300,7 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
     if "edge_sidecar_to_children" in item:
         media_lst = item["edge_sidecar_to_children"]["edges"]
         if isinstance(num, int) and num > len(media_lst):
-            return file("templates/404.html")
+            return file("templates/404.html", content_type="text/html")
         media = (media_lst[num - 1 if num else 0])["node"]
     else:
         media = item
@@ -338,13 +338,13 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
 async def videos(post_id: str, num: int):
     data = await get_data(post_id)
     if "error" in data:
-        return file("templates/404.html")
+        return file("templates/404.html", content_type="text/html")
     item = data["shortcode_media"]
 
     if "edge_sidecar_to_children" in item:
         media_lst = item["edge_sidecar_to_children"]["edges"]
         if num > len(media_lst):
-            return file("templates/404.html")
+            return file("templates/404.html", content_type="text/html")
         media = media_lst[num - 1] if num else media_lst[0]
     else:
         media = item
@@ -364,13 +364,13 @@ async def videos(post_id: str, num: int):
 async def images(post_id: str, num: int):
     data = await get_data(post_id)
     if "error" in data:
-        return file("templates/404.html")
+        return file("templates/404.html", content_type="text/html")
     item = data["shortcode_media"]
 
     if "edge_sidecar_to_children" in item:
         media_lst = item["edge_sidecar_to_children"]["edges"]
         if num > len(media_lst):
-            return file("templates/404.html")
+            return file("templates/404.html", content_type="text/html")
         media = media_lst[num - 1] if num else media_lst[0]
     else:
         media = item
@@ -384,7 +384,7 @@ async def images(post_id: str, num: int):
 async def oembed(post_id: str):
     data = await get_data(post_id)
     if "error" in data:
-        return file("templates/404.html")
+        return file("templates/404.html", content_type="text/html")
     item = data["shortcode_media"]
     description = item["edge_media_to_caption"]["edges"] or [{"node": {"text": ""}}]
     description = description[0]["node"]["text"]
@@ -415,7 +415,7 @@ async def grid(post_id: str):
 
     data = await get_data(post_id)
     if "error" in data:
-        return file("templates/404.html")
+        return file("templates/404.html", content_type="text/html")
     item = data["shortcode_media"]
 
     if "edge_sidecar_to_children" in item:
@@ -437,7 +437,7 @@ async def grid(post_id: str):
     # Download images and merge them into a single image
     media_imgs = await asyncio.gather(*[download_image(url) for url in media_urls])
     if media_imgs == []:
-        return file("templates/404.html")
+        return file("templates/404.html", content_type="text/html")
     media_vips = [
         pyvips.Image.new_from_buffer(img, "", access="sequential") for img in media_imgs
     ]
