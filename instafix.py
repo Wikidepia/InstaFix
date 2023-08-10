@@ -1,22 +1,20 @@
 import asyncio
-import json
 import os
 import random
 import re
-import time
 from typing import Optional
 from urllib.parse import urlencode, urljoin
 
 import esprima
 import httpx
+import orjson
 import pyvips
 import sentry_sdk
 import tenacity
+from blacksheep import Application, Request, file, html, json, redirect
+from blacksheep.server.templating import use_templates
 from diskcache import Cache
-from fastapi import FastAPI, Request
-from fastapi.responses import (FileResponse, HTMLResponse, ORJSONResponse,
-                               PlainTextResponse, RedirectResponse)
-from fastapi.templating import Jinja2Templates
+from jinja2 import FileSystemLoader
 from selectolax.lexbor import LexborHTMLParser
 
 pyvips.cache_set_max(0)
@@ -38,8 +36,9 @@ if "GRAPHQL_PROXY" in os.environ:
 if "WORKER_PROXY" in os.environ:
     print("Using worker proxy:", os.environ["WORKER_PROXY"])
 
-app = FastAPI()
-templates = Jinja2Templates(directory="templates")
+app = Application()
+view = use_templates(app, loader=FileSystemLoader("templates"))
+
 
 headers = {
     "authority": "www.instagram.com",
@@ -55,8 +54,6 @@ headers = {
 
 
 async def get_data(post_id: str) -> Optional[dict]:
-    cache = app.state.cache
-
     data = cache.get(post_id)
     if not data:
         data = await _get_data(post_id)
@@ -67,8 +64,6 @@ async def get_data(post_id: str) -> Optional[dict]:
 
 @tenacity.retry(stop=tenacity.stop_after_attempt(3), wait=tenacity.wait_fixed(1))
 async def _get_data(post_id: str) -> Optional[dict]:
-    client = app.state.client
-
     api_resp = (
         await client.get(
             f"https://www.instagram.com/p/{post_id}/embed/captioned",
@@ -80,7 +75,7 @@ async def _get_data(post_id: str) -> Optional[dict]:
         r"window\.__additionalDataLoaded\('extra',(.*)\);<\/script>", api_resp
     )
     if data:
-        gql_data = json.loads(data[0])
+        gql_data = orjson.loads(data[0])
         if gql_data and gql_data.get("shortcode_media"):
             return gql_data
 
@@ -90,8 +85,8 @@ async def _get_data(post_id: str) -> Optional[dict]:
         tokenized = esprima.tokenize(data[0])
         for token in tokenized:
             if "shortcode_media" in token.value:
-                # json.loads to unescape the JSON
-                return json.loads(json.loads(token.value))["gql_data"]
+                # orjson.loads to unescape the JSON
+                return orjson.loads(orjson.loads(token.value))["gql_data"]
 
     # Get data from HTML
     embed_data = parse_embed(api_resp)
@@ -150,8 +145,6 @@ def parse_embed(html: str) -> dict:
 
 
 async def parse_json_ld(post_id: str) -> dict:
-    client = app.state.client
-
     resp = await client.get(f"https://www.instagram.com/p/{post_id}/")
     if resp.status_code != 200:
         return {"error": "Not found"}
@@ -161,7 +154,7 @@ async def parse_json_ld(post_id: str) -> dict:
     if not json_ld:
         return {"error": "Server is blocked from Instagram"}
 
-    json_ld = json.loads(json_ld.text())
+    json_ld = orjson.loads(json_ld.text())
     if isinstance(json_ld, list):
         json_ld = json_ld[0]
 
@@ -214,10 +207,9 @@ async def parse_json_ld(post_id: str) -> dict:
 
 
 async def query_gql(post_id: str) -> dict:
-    client = app.state.gql_client
     params = {
         "query_hash": "b3055c01b4b222b8a47dc12b090e4e64",
-        "variables": json.dumps({"shortcode": post_id}),
+        "variables": orjson.dumps({"shortcode": post_id}).decode(),
     }
     try:
         response = await client.get(
@@ -237,13 +229,14 @@ def mediaid_to_code(media_id: int):
     return short_code
 
 
-@app.on_event("startup")
-async def startup():
-    app.state.cache = Cache(
+@app.on_start
+async def startup(_):
+    global cache, client, gql_client
+    cache = Cache(
         "cache", size_limit=int(5e9), eviction_policy="least-recently-used"
     )  # Limit cache to 5GB
     limits = httpx.Limits(max_keepalive_connections=None, max_connections=None)
-    app.state.client = httpx.AsyncClient(
+    client = httpx.AsyncClient(
         headers=headers,
         follow_redirects=True,
         timeout=120.0,
@@ -252,7 +245,7 @@ async def startup():
     )
     # GraphQL are constantly blocked,
     # it needs to use a different proxy (residential preferred)
-    app.state.gql_client = httpx.AsyncClient(
+    gql_client = httpx.AsyncClient(
         headers=headers,
         follow_redirects=True,
         timeout=5.0,
@@ -261,52 +254,53 @@ async def startup():
     )
 
 
-@app.on_event("shutdown")
-async def shutdown():
-    await app.state.client.aclose()
+@app.on_stop
+async def shutdown(_):
+    await client.aclose()
+    await gql_client.aclose()
 
 
-@app.get("/", response_class=HTMLResponse)
+@app.route("/")
 def root():
     with open("templates/home.html") as f:
-        html = f.read()
-    return HTMLResponse(content=html)
+        home_html = f.read()
+    return html(value=home_html)
 
 
-@app.get("/p/{post_id}")
-@app.get("/p/{post_id}/{num}")
-@app.get("/reel/{post_id}")
-@app.get("/reels/{post_id}")
-@app.get("/tv/{post_id}")
-@app.get("/stories/{username}/{post_id}")
+@app.route("/p/{post_id}")
+@app.route("/p/{post_id}/{num}")
+@app.route("/reel/{post_id}")
+@app.route("/reels/{post_id}")
+@app.route("/tv/{post_id}")
+@app.route("/stories/{username}/{post_id}")
 async def read_item(request: Request, post_id: str, num: Optional[int] = None):
-    if "/stories/" in request.url.path:
+    if b"/stories/" in request.url.path:
         if not post_id.isdigit():
-            return FileResponse("templates/404.html", status_code=404)
+            return file("templates/404.html")
         post_id = mediaid_to_code(int(post_id))
 
-    post_url = urljoin("https://www.instagram.com/", request.url.path)
+    user_agent = request.headers.get_first(b"User-Agent") or b""
+    post_url = urljoin("https://www.instagram.com/", request.url.path.decode())
     if not re.search(
-        r"bot|facebook|embed|got|firefox\/92|firefox\/38|curl|wget|go-http|yahoo|generator|whatsapp|preview|link|proxy|vkshare|images|analyzer|index|crawl|spider|python|cfnetwork|node",
-        request.headers.get("User-Agent", "").lower(),
+        rb"bot|facebook|embed|got|firefox\/92|firefox\/38|curl|wget|go-http|yahoo|generator|whatsapp|preview|link|proxy|vkshare|images|analyzer|index|crawl|spider|python|cfnetwork|node",
+        user_agent.lower(),
     ):
-        return RedirectResponse(post_url)
+        return redirect(post_url)
 
     data = await get_data(post_id)
     if "error" in data:
         ctx = {
-            "request": request,
             "title": "InstaFix",
             "url": post_url,
             "description": "Sorry, this post isn't available.",
         }
-        return templates.TemplateResponse("base.html", ctx, status_code=404)
+        return view("base", ctx)
 
     item = data["shortcode_media"]
     if "edge_sidecar_to_children" in item:
         media_lst = item["edge_sidecar_to_children"]["edges"]
         if isinstance(num, int) and num > len(media_lst):
-            return FileResponse("templates/404.html", status_code=404)
+            return file("templates/404.html")
         media = (media_lst[num - 1 if num else 0])["node"]
     else:
         media = item
@@ -317,7 +311,6 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
     description = description[:200] + "..." if len(description) > 200 else description
 
     ctx = {
-        "request": request,
         "url": post_url,
         "description": description,
         "post_id": post_id,
@@ -338,20 +331,20 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
         num = num if num else 1
         ctx["image"] = f"/images/{post_id}/{num}"
         ctx["card"] = "summary_large_image"
-    return templates.TemplateResponse("base.html", ctx)
+    return view("base", ctx)
 
 
-@app.get("/videos/{post_id}/{num}")
-async def videos(request: Request, post_id: str, num: int):
+@app.route("/videos/{post_id}/{num}")
+async def videos(post_id: str, num: int):
     data = await get_data(post_id)
     if "error" in data:
-        return FileResponse("templates/404.html", status_code=404)
+        return file("templates/404.html")
     item = data["shortcode_media"]
 
     if "edge_sidecar_to_children" in item:
         media_lst = item["edge_sidecar_to_children"]["edges"]
         if num > len(media_lst):
-            return FileResponse("templates/404.html", status_code=404)
+            return file("templates/404.html")
         media = media_lst[num - 1] if num else media_lst[0]
     else:
         media = item
@@ -365,39 +358,39 @@ async def videos(request: Request, post_id: str, num: int):
         params = urlencode({"url": video_url, "referer": "https://instagram.com/"})
         wproxy = random.choice(worker_proxy.split(","))
         video_url = f"{wproxy}?{params}"
-    return RedirectResponse(video_url)
+    return redirect(video_url)
 
 
-@app.get("/images/{post_id}/{num}")
-async def images(request: Request, post_id: str, num: int):
+@app.route("/images/{post_id}/{num}")
+async def images(post_id: str, num: int):
     data = await get_data(post_id)
     if "error" in data:
-        return FileResponse("templates/404.html", status_code=404)
+        return file("templates/404.html")
     item = data["shortcode_media"]
 
     if "edge_sidecar_to_children" in item:
         media_lst = item["edge_sidecar_to_children"]["edges"]
         if num > len(media_lst):
-            return FileResponse("templates/404.html", status_code=404)
+            return file("templates/404.html")
         media = media_lst[num - 1] if num else media_lst[0]
     else:
         media = item
 
     media = media.get("node", media)
     image_url = media["display_url"]
-    return RedirectResponse(image_url)
+    return redirect(image_url)
 
 
-@app.get("/oembed.json")
-async def oembed(request: Request, post_id: str):
+@app.route("/oembed.json")
+async def oembed(post_id: str):
     data = await get_data(post_id)
     if "error" in data:
-        return FileResponse("templates/404.html", status_code=404)
+        return file("templates/404.html")
     item = data["shortcode_media"]
     description = item["edge_media_to_caption"]["edges"] or [{"node": {"text": ""}}]
     description = description[0]["node"]["text"]
     description = description[:200] + "..." if len(description) > 200 else description
-    return ORJSONResponse(
+    return json(
         {
             "author_name": description,
             "author_url": f"https://instagram.com/p/{post_id}",
@@ -410,13 +403,12 @@ async def oembed(request: Request, post_id: str):
     )
 
 
-@app.get("/grid/{post_id}")
-async def grid(request: Request, post_id: str):
-    client = request.app.state.client
+@app.route("/grid/{post_id}")
+async def grid(post_id: str):
     if os.path.exists(f"static/grid:{post_id}.webp"):
-        return FileResponse(
+        return file(
             f"static/grid:{post_id}.webp",
-            media_type="image/webp",
+            content_type="image/webp",
         )
 
     async def download_image(url):
@@ -424,7 +416,7 @@ async def grid(request: Request, post_id: str):
 
     data = await get_data(post_id)
     if "error" in data:
-        return FileResponse("templates/404.html", status_code=404)
+        return file("templates/404.html")
     item = data["shortcode_media"]
 
     if "edge_sidecar_to_children" in item:
@@ -441,12 +433,12 @@ async def grid(request: Request, post_id: str):
     ][:4]
 
     if len(media_urls) == 1:
-        return RedirectResponse(media_urls[0])
+        return redirect(media_urls[0])
 
     # Download images and merge them into a single image
     media_imgs = await asyncio.gather(*[download_image(url) for url in media_urls])
     if media_imgs == []:
-        return FileResponse("templates/404.html", status_code=404)
+        return file("templates/404.html")
     media_vips = [
         pyvips.Image.new_from_buffer(img, "", access="sequential") for img in media_imgs
     ]
@@ -454,12 +446,12 @@ async def grid(request: Request, post_id: str):
     grid_img = pyvips.Image.arrayjoin(media_vips, across=accross, shim=10)
     grid_img.write_to_file(f"static/grid:{post_id}.webp")
 
-    return FileResponse(
+    return file(
         f"static/grid:{post_id}.webp",
-        media_type="image/webp",
+        content_type="image/webp",
     )
 
 
-@app.get("/health", response_class=PlainTextResponse)
+@app.route("/health")
 def healthcheck():
     return "200"
