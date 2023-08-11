@@ -22,7 +22,11 @@
     <meta name="twitter:player:stream:content_type" content="video/mp4" />
     {% endif %}
 
+    {% if video is defined or image is defined %}
+    <!-- Prevent duplicate when 404 -->
     <meta property="og:site_name" content="InstaFix">
+    {% endif %}
+
     <meta property="og:url" content="{{ url }}" />
     <meta property="og:description" content="{{ description }}" />
 
