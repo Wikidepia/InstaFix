@@ -355,8 +355,8 @@ async def videos(post_id: str, num: int):
     # Proxy video via CF worker because Instagram speed limit
     worker_proxy = os.environ.get("WORKER_PROXY")
     if worker_proxy:
-        wproxy = random.choice(worker_proxy.split(","))
-        video_url = urljoin(wproxy, video_url)
+        wproxy = random.choice(worker_proxy.split(",")).strip("/")
+        video_url = wproxy + f"/{video_url}"
     return redirect(video_url)
 
 
