@@ -93,10 +93,10 @@ async def _get_data(post_id: str) -> Optional[dict]:
     if "error" not in embed_data and not embed_data["shortcode_media"]["video_blocked"]:
         return embed_data
 
-    # Get data from JSON-LD if video is blocked
-    ld_data = await parse_json_ld(post_id)
-    if "error" not in ld_data:
-        return ld_data
+    # Get data from JSON-LD if video is blocked (not working as of 15/08/2023)
+    # ld_data = await parse_json_ld(post_id)
+    # if "error" not in ld_data:
+    #     return ld_data
 
     # Query data from GraphQL, if video is blocked
     if "GRAPHQL_PROXY" in os.environ:
