@@ -317,6 +317,7 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
         "title": f"@{item['owner']['username']}",
         "width": media["dimensions"]["width"],
         "height": media["dimensions"]["height"],
+        "base_url": f"https://{request.headers.get_first(b'Host').decode()}",
     }
 
     is_image = typename in ["GraphImage", "StoryImage", "StoryVideo"]

@@ -46,7 +46,7 @@
     <meta http-equiv="refresh" content="0; url = {{ url }}" />
 
     {% if video is defined %}
-    <link rel="alternate" href="/oembed.json?post_id={{ post_id }}" type="application/json+oembed">
+    <link rel="alternate" href="{{ base_url }}/oembed.json?post_id={{ post_id }}" type="application/json+oembed">
     {% endif %}
 </head>
 
