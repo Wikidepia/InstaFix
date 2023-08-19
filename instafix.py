@@ -336,7 +336,7 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
 
 
 @app.route("/videos/{post_id}/{num}")
-async def videos(post_id: str, num: int):
+async def videos(request: Request, post_id: str, num: int):
     data = await get_data(post_id)
     if "error" in data:
         return file("templates/404.html", content_type="text/html")
@@ -354,8 +354,10 @@ async def videos(post_id: str, num: int):
     video_url = media.get("video_url", media["display_url"])
 
     # Proxy video via CF worker because Instagram speed limit
+    # Except for Telegram
+    user_agent = (request.headers.get_first(b"User-Agent") or b"").lower()
     worker_proxy = os.environ.get("WORKER_PROXY")
-    if worker_proxy:
+    if worker_proxy and b"telegrambot" not in user_agent:
         wproxy = random.choice(worker_proxy.split(",")).strip("/")
         video_url = wproxy + f"/{video_url}"
     return redirect(video_url)
