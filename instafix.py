@@ -282,7 +282,7 @@ async def read_item(request: Request, post_id: str, num: Optional[int] = None):
     user_agent = request.headers.get_first(b"User-Agent") or b""
     post_url = urljoin("https://www.instagram.com/", request.url.path.decode())
     if not re.search(
-        rb"bot|facebook|embed|got|firefox\/92|firefox\/38|curl|wget|go-http|yahoo|generator|whatsapp|preview|link|proxy|vkshare|images|analyzer|index|crawl|spider|python|cfnetwork|node",
+        rb"bot|facebook|embed|got|firefox\/92|firefox\/38|curl|wget|go-http|yahoo|generator|whatsapp|preview|link|proxy|vkshare|images|analyzer|index|crawl|spider|python|cfnetwork|node|mastodon|http\.rb",
         user_agent.lower(),
     ):
         return redirect(post_url)
