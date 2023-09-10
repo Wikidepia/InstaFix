@@ -41,10 +41,10 @@ view = use_templates(app, loader=FileSystemLoader("templates"))
 
 
 headers = {
-    "authority": "www.instagram.com",
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
     "accept-language": "en-US,en;q=0.9",
     "cache-control": "max-age=0",
+    "connection": "close",
     "sec-fetch-mode": "navigate",
     "upgrade-insecure-requests": "1",
     "referer": "https://www.instagram.com/",
@@ -64,15 +64,16 @@ async def get_data(post_id: str) -> Optional[dict]:
 
 @tenacity.retry(stop=tenacity.stop_after_attempt(3), wait=tenacity.wait_fixed(1))
 async def _get_data(post_id: str) -> Optional[dict]:
-    api_resp = (
-        await client.get(
-            f"https://www.instagram.com/p/{post_id}/embed/captioned",
-        )
-    ).text
+    embed_resp = await client.get(
+        f"https://www.instagram.com/p/{post_id}/embed/captioned",
+    )
+    if embed_resp.status_code != 200:
+        raise Exception("Failed to fetch embed")
+    embed_content = embed_resp.text
 
     # additionalDataLoaded
     data = re.findall(
-        r"window\.__additionalDataLoaded\('extra',(.*)\);<\/script>", api_resp
+        r"window\.__additionalDataLoaded\('extra',(.*)\);<\/script>", embed_content
     )
     if data:
         gql_data = orjson.loads(data[0])
@@ -80,7 +81,9 @@ async def _get_data(post_id: str) -> Optional[dict]:
             return gql_data
 
     # TimeSliceImpl
-    data = re.findall(r'<script>(requireLazy\(\["TimeSliceImpl".*)<\/script>', api_resp)
+    data = re.findall(
+        r'<script>(requireLazy\(\["TimeSliceImpl".*)<\/script>', embed_content
+    )
     if data and "shortcode_media" in data[0]:
         tokenized = esprima.tokenize(data[0])
         for token in tokenized:
@@ -89,7 +92,7 @@ async def _get_data(post_id: str) -> Optional[dict]:
                 return orjson.loads(orjson.loads(token.value))["gql_data"]
 
     # Get data from HTML
-    embed_data = parse_embed(api_resp)
+    embed_data = parse_embed(embed_content)
     if "error" not in embed_data and not embed_data["shortcode_media"]["video_blocked"]:
         return embed_data
 
@@ -145,11 +148,13 @@ def parse_embed(html: str) -> dict:
 
 
 async def parse_json_ld(post_id: str) -> dict:
-    resp = await client.get(f"https://www.instagram.com/p/{post_id}/")
-    if resp.status_code != 200:
+    post_resp = await client.get(
+        f"https://www.instagram.com/p/{post_id}/"
+    )
+    if post_resp.status_code != 200:
         return {"error": "Not found"}
 
-    tree = LexborHTMLParser(resp.text)
+    tree = LexborHTMLParser(post_resp.text)
     json_ld = tree.css_first("script[type='application/ld+json']")
     if not json_ld:
         return {"error": "Server is blocked from Instagram"}
@@ -212,7 +217,7 @@ async def query_gql(post_id: str) -> dict:
         "variables": orjson.dumps({"shortcode": post_id}).decode(),
     }
     try:
-        response = await client.get(
+        response = await gql_client.get(
             "https://www.instagram.com/graphql/query/", params=params
         )
         return response.json()
