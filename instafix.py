@@ -104,7 +104,7 @@ async def _get_data(post_id: str) -> Optional[dict]:
     # Query data from GraphQL, if video is blocked
     if "GRAPHQL_PROXY" in os.environ:
         gql_data = await query_gql(post_id)
-        if gql_data.get("status") == "ok":
+        if gql_data.get("status") == "ok" and gql_data["data"].get("shortcode_media"):
             return gql_data["data"]
     return embed_data
 
