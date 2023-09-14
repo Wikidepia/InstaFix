@@ -244,6 +244,7 @@ async def startup(_):
     client = httpx.AsyncClient(
         headers=headers,
         follow_redirects=True,
+        verify=False,
         timeout=5.0,
         limits=limits,
         proxies={"all://www.instagram.com": os.environ.get("EMBED_PROXY")},
@@ -253,6 +254,7 @@ async def startup(_):
     gql_client = httpx.AsyncClient(
         headers=headers,
         follow_redirects=True,
+        verify=False,
         timeout=5.0,
         limits=limits,
         proxies={"all://www.instagram.com": os.environ.get("GRAPHQL_PROXY")},
