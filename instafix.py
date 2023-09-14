@@ -244,7 +244,7 @@ async def startup(_):
     client = httpx.AsyncClient(
         headers=headers,
         follow_redirects=True,
-        timeout=120.0,
+        timeout=5.0,
         limits=limits,
         proxies={"all://www.instagram.com": os.environ.get("EMBED_PROXY")},
     )
