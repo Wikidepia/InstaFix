@@ -236,8 +236,8 @@ def mediaid_to_code(media_id: int):
 async def startup(_):
     global cache, client, gql_client
     cache = Cache(
-        "cache", size_limit=int(1e10), eviction_policy="least-frequently-used"
-    )  # Limit cache to 10GB
+        "cache", size_limit=int(2e10), eviction_policy="least-frequently-used"
+    )  # Limit cache to 20GB
     limits = httpx.Limits(max_keepalive_connections=None, max_connections=None)
     client = httpx.AsyncClient(
         headers=headers,
