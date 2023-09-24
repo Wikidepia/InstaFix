@@ -148,9 +148,7 @@ def parse_embed(html: str) -> dict:
 
 
 async def parse_json_ld(post_id: str) -> dict:
-    post_resp = await client.get(
-        f"https://www.instagram.com/p/{post_id}/"
-    )
+    post_resp = await client.get(f"https://www.instagram.com/p/{post_id}/")
     if post_resp.status_code != 200:
         return {"error": "Not found"}
 
