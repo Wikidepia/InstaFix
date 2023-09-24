@@ -7,6 +7,7 @@ from urllib.parse import urljoin
 
 import esprima
 import httpx
+import lz4.frame
 import orjson
 import pyvips
 import sentry_sdk
@@ -57,7 +58,9 @@ async def get_data(post_id: str) -> Optional[dict]:
     data = cache.get(post_id)
     if not data:
         data = await _get_data(post_id)
+        data = lz4.frame.compress(orjson.dumps(data), compression_level=3)
         cache.set(post_id, data, expire=24 * 60 * 60)
+    data = orjson.loads(lz4.frame.decompress(data))
     data = data.get("data", data)
     return data
 
