@@ -239,13 +239,14 @@ def mediaid_to_code(media_id: int):
 async def startup(_):
     global cache, client, gql_client
     cache = Cache(
-        "cache", size_limit=int(2e10), eviction_policy="least-frequently-used"
-    )  # Limit cache to 20GB
+        "cache", size_limit=int(1e10), eviction_policy="least-frequently-used"
+    )  # Limit cache to 10GB
     limits = httpx.Limits(max_keepalive_connections=None, max_connections=None)
     client = httpx.AsyncClient(
         headers=headers,
         follow_redirects=True,
         verify=False,
+        timeout=10,
         limits=limits,
         proxies={"all://www.instagram.com": os.environ.get("EMBED_PROXY")},
     )
@@ -255,6 +256,7 @@ async def startup(_):
         headers=headers,
         follow_redirects=True,
         verify=False,
+        timeout=10,
         limits=limits,
         proxies={"all://www.instagram.com": os.environ.get("GRAPHQL_PROXY")},
     )
