@@ -2,6 +2,8 @@ package handlers
 
 import (
 	data "instafix/handlers/data"
+	"io"
+	"net/http"
 	"os"
 	"strings"
 	"sync"
@@ -10,9 +12,11 @@ import (
 	"github.com/davidbyttow/govips/v2/vips"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog/log"
-	"github.com/valyala/fasthttp"
 )
 
+var transport = &http.Transport{
+	MaxConnsPerHost: 1000,
+}
 var timeout = 10 * time.Second
 
 func Grid() fiber.Handler {
@@ -44,13 +48,8 @@ func Grid() fiber.Handler {
 		var mutex sync.Mutex
 		wg.Add(len(mediaList))
 
+		client := http.Client{Transport: transport, Timeout: timeout}
 		for _, media := range mediaList {
-			// Get request/response from pool
-			req := fasthttp.AcquireRequest()
-			res := fasthttp.AcquireResponse()
-			defer fasthttp.ReleaseRequest(req)
-			defer fasthttp.ReleaseResponse(res)
-
 			go func(media data.Media) {
 				defer wg.Done()
 
@@ -58,15 +57,20 @@ func Grid() fiber.Handler {
 				if !strings.Contains(media.TypeName, "Image") {
 					return
 				}
-
-				// Download image
-				req.SetRequestURI(media.URL)
-				err = fasthttp.DoTimeout(req, res, timeout)
+				req, err := http.NewRequest(http.MethodGet, media.URL, nil)
 				if err != nil {
 					return
 				}
 
-				image, err := vips.NewImageFromBuffer(res.Body())
+				// Make request client.Get
+				res, err := client.Do(req)
+				if err != nil {
+					return
+				}
+				defer res.Body.Close()
+				buf, err := io.ReadAll(res.Body)
+
+				image, err := vips.NewImageFromBuffer(buf)
 				if err != nil {
 					log.Error().Str("postID", postID).Err(err).Msg("Failed to create image from buffer")
 					return

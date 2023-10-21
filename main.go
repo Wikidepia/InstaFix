@@ -11,10 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/template/pug/v2"
 	"github.com/rs/zerolog"
-	"github.com/valyala/fasthttp"
 )
-
-var client *fasthttp.Client
 
 func init() {
 	data.InitDB()

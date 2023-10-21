@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"instafix/utils"
+	"io"
+	"net/http"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
@@ -14,16 +16,14 @@ import (
 	"github.com/tdewolff/parse/v2"
 	"github.com/tdewolff/parse/v2/js"
 	"github.com/valyala/bytebufferpool"
-	"github.com/valyala/fasthttp"
-	"github.com/valyala/fasthttp/fasthttpproxy"
 	"github.com/valyala/fastjson"
 )
 
 var parserPool fastjson.ParserPool
-var client = &fasthttp.Client{
-	Dial:            fasthttpproxy.FasthttpProxyHTTPDialer(),
-	ReadBufferSize:  16 * 1024,
-	MaxConnsPerHost: 2048,
+var transport = &http.Transport{
+	DisableKeepAlives: true,
+	MaxConnsPerHost:   1000,
+	Proxy:             http.ProxyFromEnvironment,
 }
 var timeout = 10 * time.Second
 var bucket = "cache"
@@ -180,34 +180,35 @@ func (i *InstaData) GetData(postID string) error {
 	return nil
 }
 
+var headers = http.Header{
+	"Accept":          {"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8"},
+	"Accept-Language": {"en-US,en;q=0.9"},
+	"User-Agent":      {"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)"},
+	"Sec-Fetch-Mode":  {"navigate"},
+	"Connection":      {"close"},
+}
+
 func getData(postID string) (*fastjson.Value, error) {
-	// Get request/response from pool
-	req := fasthttp.AcquireRequest()
-	res := fasthttp.AcquireResponse()
-	defer fasthttp.ReleaseRequest(req)
-	defer fasthttp.ReleaseResponse(res)
+	client := http.Client{Transport: transport, Timeout: timeout}
 
-	p := parserPool.Get()
-	defer parserPool.Put(p)
-
-	// Set request url
-	req.SetRequestURI("https://www.instagram.com/p/" + postID + "/embed/captioned/")
-
-	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9")
-	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)")
-	req.Header.Set("Sec-Fetch-Mode", "navigate")
-	req.Header.Set("Connection", "close")
-
-	// Make request client.Get
-	if err := client.DoTimeout(req, res, timeout); err != nil {
+	req, err := http.NewRequest(http.MethodGet, "https://www.instagram.com/p/"+postID+"/embed/captioned/", nil)
+	if err != nil {
 		return nil, err
 	}
+	req.Header = headers
 
-	embedContent := res.Body()
+	// Make request client.Get
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	embedContent, err := io.ReadAll(res.Body)
 
 	// Pattern matching using LDE
 	l := &Line{}
+	p := parserPool.Get()
+	defer parserPool.Put(p)
 
 	// TimeSliceImpl
 	ldeMatch := false

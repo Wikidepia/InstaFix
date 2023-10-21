@@ -13,7 +13,6 @@ require (
 	github.com/rs/zerolog v1.31.0
 	github.com/tdewolff/parse/v2 v2.6.8
 	github.com/valyala/bytebufferpool v1.0.0
-	github.com/valyala/fasthttp v1.49.0
 	github.com/valyala/fastjson v1.6.4
 )
 
@@ -40,6 +39,7 @@ require (
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/stretchr/testify v1.8.4 // indirect
 	github.com/tidwall/btree v1.7.0 // indirect
+	github.com/valyala/fasthttp v1.49.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	github.com/xujiajun/mmap-go v1.0.1 // indirect
 	github.com/xujiajun/utils v0.0.0-20220904132955-5f7c5b914235 // indirect
