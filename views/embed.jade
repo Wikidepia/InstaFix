@@ -1,0 +1,44 @@
+:go:func Embed(v *ViewsData)
+
+mixin for(golang)
+	#cmd Precompile jade templates to #{golang} code.
+
+doctype html
+html(lang='en')
+  head
+    meta(charset="utf-8")
+    meta(name='theme-color', content='#CE0071')
+
+    if (v.Card != "")
+      meta(name='twitter:card', content=v.Card)
+    if (v.Title != "")
+      meta(name='twitter:title', content=v.Title)
+    if (v.ImageURL != "")
+      meta(name='twitter:image', content=v.ImageURL)
+    if (v.VideoURL != "")
+      meta(name='twitter:player:width', content=v.Width)
+      meta(name='twitter:player:height', content=v.Height)
+      meta(name='twitter:player:stream', content=v.VideoURL)
+      meta(name='twitter:player:stream:content_type', content='video/mp4')
+
+    if (v.VideoURL != "" || v.ImageURL != "")
+      meta(property='og:site_name', content='InstaFix')
+
+    meta(property='og:url', content=v.URL)
+    meta(property='og:description', content=v.Description)
+
+    if (v.ImageURL != "")
+      meta(property='og:image', content=v.ImageURL)
+
+    if (v.VideoURL != "")
+      meta(property='og:video', content=v.VideoURL)
+      meta(property='og:video:secure_url', content=v.VideoURL)
+      meta(property='og:video:type', content='video/mp4')
+      meta(property='og:video:width', content=v.Width)
+      meta(property='og:video:height', content=v.Height)
+
+    meta(http-equiv='refresh', content=`0; url = ${v.URL}`)
+
+  body
+    | Redirecting you to the post in a moment. 
+    a(href=v.URL) Or click here.

@@ -1,0 +1,35 @@
+:go:func Home()
+
+mixin for(golang)
+	#cmd Precompile jade templates to #{golang} code.
+
+doctype html
+html(lang="en")
+
+  head
+    meta(charset="utf-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1")
+    meta(property="og:title", content="InstaFix")
+    meta(property="og:site_name", content="InstaFix")
+    meta(property="og:description", content="Fix Instagram embeds in Discord (and Telegram!)")
+    title InstaFix
+    link(rel="icon", href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100%'><text y='.9em' font-size='90'>🛠</text></svg>")
+    link(rel="stylesheet", href="https://unpkg.com/@picocss/pico@latest/css/pico.min.css")
+
+  body
+    main.container(style="max-width: 35rem")
+      hgroup
+        h1 InstaFix
+        h2 Fix Instagram embeds in Discord (and Telegram!)
+      p InstaFix serves fixed Instagram image and video embeds. Heavily inspired by fxtwitter.com.
+      
+      section
+        header
+          h3(style="margin-bottom: 4px") How to Use
+          p Add dd before instagram.com to fix embeds.
+        video(src="https://user-images.githubusercontent.com/72781956/168544556-31009b0e-62e8-4d4c-909b-434ad146e118.mp4", controls="controls", muted="muted", style="width: 100%; max-height: 100%")
+          | Your browser does not support the video tag.
+        hr
+        small: a(href="https://github.com/Wikidepia/InstaFix", target="_blank") Source code available in GitHub!
+        br
+        small • Instagram is a trademark of Instagram, Inc. This app is not affiliated with Instagram, Inc.
