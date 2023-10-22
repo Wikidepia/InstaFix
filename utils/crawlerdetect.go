@@ -34,6 +34,7 @@ var knownBots = [][]byte{
 }
 
 func IsBot(userAgent []byte) bool {
+	userAgent = bytes.ToLower(userAgent)
 	for _, bot := range knownBots {
 		if bytes.Contains(userAgent, bot) {
 			return true
