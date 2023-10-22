@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"instafix/utils"
 	"instafix/views"
 	"strconv"
 	"strings"
@@ -18,6 +19,11 @@ func Embed() fiber.Handler {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": err.Error(),
 			})
+		}
+
+		// If User-Agent is not bot, redirect to Instagram
+		if !utils.IsBot(c.Request().Header.UserAgent()) {
+			return c.Redirect("https://instagram.com" + c.Path())
 		}
 
 		// Get data
