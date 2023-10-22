@@ -20,7 +20,6 @@ import (
 	"github.com/valyala/fastjson"
 )
 
-var parserPool fastjson.ParserPool
 var transport = &http.Transport{
 	DialContext: (&net.Dialer{
 		Timeout: 5 * time.Second,
@@ -212,8 +211,7 @@ func getData(postID string) (*fastjson.Value, error) {
 
 	// Pattern matching using LDE
 	l := &Line{}
-	p := parserPool.Get()
-	defer parserPool.Put(p)
+	var p fastjson.Parser
 
 	// TimeSliceImpl
 	ldeMatch := false
