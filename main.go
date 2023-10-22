@@ -23,7 +23,10 @@ func main() {
 	app := fiber.New(fiber.Config{
 		Views: engine,
 	})
-	app.Use(recover.New())
+
+	recoverConfig := recover.ConfigDefault
+	recoverConfig.EnableStackTrace = true
+	app.Use(recover.New(recoverConfig))
 	app.Use(pprof.New())
 
 	// Initialize VIPS
