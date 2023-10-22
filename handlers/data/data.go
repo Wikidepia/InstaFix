@@ -248,18 +248,19 @@ func getData(postID string) (*fastjson.Value, error) {
 		}
 	}
 
-	data, err := ParseEmbedHTML(embedContent)
+	embedHTML, err := ParseEmbedHTML(embedContent)
+	if err != nil {
+		return nil, err
+	}
+	embedHTMLData, err := p.ParseBytes(embedHTML)
 	if err != nil {
 		return nil, err
 	}
 	log.Info().Str("postID", postID).Msg("Data parsed from ParseEmbedHTML")
-	return data, nil
+	return embedHTMLData, nil
 }
 
-func ParseEmbedHTML(embedHTML []byte) (*fastjson.Value, error) {
-	p := parserPool.Get()
-	defer parserPool.Put(p)
-
+func ParseEmbedHTML(embedHTML []byte) ([]byte, error) {
 	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(embedHTML))
 	if err != nil {
 		return nil, err
@@ -289,12 +290,12 @@ func ParseEmbedHTML(embedHTML []byte) (*fastjson.Value, error) {
 	caption := doc.Find(".Caption").Text()
 
 	// Totally safe 100% valid JSON 👍
-	return p.Parse(`{
+	return utils.S2B(`{
 		"shortcode_media": {
 			"owner": {"username": "` + username + `"},
 			"node": {"__typename": "` + typename + `", "display_url": "` + mediaURL + `"},
 			"edge_media_to_caption": {"edges": [{"node": {"text": ` + escape.JSON(caption) + `}}]},
 			"dimensions": {"height": null, "width": null}
 		}
-	}`)
+	}`), nil
 }
