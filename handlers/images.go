@@ -26,6 +26,11 @@ func Images() fiber.Handler {
 		}
 
 		// Redirect to image URL
+		if mediaNum > len(item.Medias) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "Media not found",
+			})
+		}
 		imageURL := item.Medias[max(1, mediaNum)-1].URL
 		return c.Redirect(imageURL, fiber.StatusFound)
 	}
