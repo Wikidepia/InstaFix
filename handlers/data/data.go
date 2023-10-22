@@ -148,11 +148,18 @@ func getData(postID string) (*fastjson.Value, error) {
 	}
 	req.Header = headers
 
-	// Make request client.Get
-	res, err := client.Do(req)
+	var res *http.Response
+	for retries := 0; retries < 3; retries++ {
+		// Make request client.Get
+		res, err = client.Do(req)
+		if err == nil {
+			break
+		}
+	}
 	if err != nil {
 		return nil, err
 	}
+
 	defer res.Body.Close()
 	embedContent, err := io.ReadAll(res.Body)
 
