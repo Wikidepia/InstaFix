@@ -25,14 +25,21 @@ var transport = &http.Transport{
 	DialContext: (&net.Dialer{
 		Timeout: 5 * time.Second,
 	}).DialContext,
-	TLSHandshakeTimeout:   5 * time.Second,
-	ResponseHeaderTimeout: 5 * time.Second,
+	TLSHandshakeTimeout:   time.Minute,
+	ResponseHeaderTimeout: time.Minute,
 	ExpectContinueTimeout: 1 * time.Second,
 	// Disable HTTP keep-alives, needed for proxy
 	MaxIdleConnsPerHost: -1,
 	MaxConnsPerHost:     1000,
 	DisableKeepAlives:   true,
 	Proxy:               http.ProxyFromEnvironment,
+}
+var headers = http.Header{
+	"Accept":          {"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8"},
+	"Accept-Language": {"en-US,en;q=0.9"},
+	"Accept-Encoding": {"identity"},
+	"User-Agent":      {"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)"},
+	"Sec-Fetch-Mode":  {"navigate"},
 }
 var timeout = 10 * time.Second
 var bucket = "cache"
@@ -184,14 +191,6 @@ func (i *InstaData) GetData(postID string) error {
 		return err
 	}
 	return nil
-}
-
-var headers = http.Header{
-	"Accept":          {"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8"},
-	"Accept-Language": {"en-US,en;q=0.9"},
-	"User-Agent":      {"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)"},
-	"Sec-Fetch-Mode":  {"navigate"},
-	"Connection":      {"close"},
 }
 
 func getData(postID string) (*fastjson.Value, error) {
