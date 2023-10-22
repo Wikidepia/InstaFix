@@ -49,6 +49,11 @@ func Embed() fiber.Handler {
 		var sb strings.Builder
 		sb.Grow(32) // 32 bytes should be enough for most cases
 
+		if mediaNum > len(item.Medias) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "Media not found",
+			})
+		}
 		typename := item.Medias[max(1, mediaNum)-1].TypeName
 		isImage := strings.Contains(typename, "Image")
 		if mediaNum == 0 && isImage {
