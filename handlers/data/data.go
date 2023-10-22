@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"instafix/utils"
-	"io"
 	"net"
 	"net/http"
 	"time"
@@ -161,7 +160,7 @@ func getData(postID string) (*fastjson.Value, error) {
 	}
 
 	defer res.Body.Close()
-	embedContent, err := io.ReadAll(res.Body)
+	embedContent, err := utils.ReadBody(res)
 
 	// Pattern matching using LDE
 	l := &Line{}

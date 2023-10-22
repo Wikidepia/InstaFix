@@ -2,7 +2,7 @@ package handlers
 
 import (
 	data "instafix/handlers/data"
-	"io"
+	"instafix/utils"
 	"net"
 	"net/http"
 	"os"
@@ -53,17 +53,18 @@ func Grid() fiber.Handler {
 		var images []*vips.ImageRef
 		var wg sync.WaitGroup
 		var mutex sync.Mutex
-		wg.Add(len(mediaList))
 
 		client := http.Client{Transport: transport, Timeout: timeout}
 		for _, media := range mediaList {
+			// Skip if not image
+			if !strings.Contains(media.TypeName, "Image") {
+				continue
+			}
+			wg.Add(1)
+
 			go func(media data.Media) {
 				defer wg.Done()
 
-				// Skip if not image
-				if !strings.Contains(media.TypeName, "Image") {
-					return
-				}
 				req, err := http.NewRequest(http.MethodGet, media.URL, nil)
 				if err != nil {
 					return
@@ -75,7 +76,7 @@ func Grid() fiber.Handler {
 					return
 				}
 				defer res.Body.Close()
-				buf, err := io.ReadAll(res.Body)
+				buf, err := utils.ReadBody(res)
 
 				image, err := vips.NewImageFromBuffer(buf)
 				if err != nil {
