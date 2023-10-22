@@ -11,6 +11,7 @@ func InitDB() {
 		nutsdb.DefaultOptions,
 		nutsdb.WithDir("database"),
 		nutsdb.WithRWMode(nutsdb.MMap),
+		nutsdb.WithEntryIdxMode(nutsdb.HintKeyAndRAMIdxMode),
 	)
 	if err != nil {
 		panic(err)
