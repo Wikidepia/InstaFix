@@ -159,8 +159,10 @@ func getData(postID string) (*fastjson.Value, error) {
 		return nil, err
 	}
 
+	bb := bytebufferpool.Get()
+	defer bytebufferpool.Put(bb)
+	_, err = bb.ReadFrom(res.Body)
 	defer res.Body.Close()
-	embedContent, err := utils.ReadBody(res)
 
 	// Pattern matching using LDE
 	l := &Line{}
@@ -168,7 +170,7 @@ func getData(postID string) (*fastjson.Value, error) {
 
 	// TimeSliceImpl
 	ldeMatch := false
-	for _, line := range bytes.Split(embedContent, utils.S2B("\n")) {
+	for _, line := range bytes.Split(bb.Bytes(), utils.S2B("\n")) {
 		// Check if line contains TimeSliceImpl
 		ldeMatch, _ = l.Extract(line)
 	}
@@ -195,7 +197,7 @@ func getData(postID string) (*fastjson.Value, error) {
 		}
 	}
 
-	embedHTML, err := ParseEmbedHTML(embedContent)
+	embedHTML, err := ParseEmbedHTML(bb.Bytes())
 	if err != nil {
 		return nil, err
 	}

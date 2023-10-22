@@ -75,7 +75,6 @@ func Grid() fiber.Handler {
 				if err != nil {
 					return
 				}
-				defer res.Body.Close()
 				buf, err := utils.ReadBody(res)
 
 				image, err := vips.NewImageFromBuffer(buf)
