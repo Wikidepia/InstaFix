@@ -102,9 +102,6 @@ func (i *InstaData) Unmarshal(bs []byte) (n int, err error) {
 }
 
 func (i *InstaData) GetData(postID string) error {
-	p := parserPool.Get()
-	defer parserPool.Put(p)
-
 	var cacheInstaData []byte
 	err := DB.View(func(tx *nutsdb.Tx) error {
 		e, err := tx.Get(bucket, utils.S2B(postID))
