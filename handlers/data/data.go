@@ -11,7 +11,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/PurpleSec/escape"
-	"github.com/mus-format/mus-go/unsafe"
+	"github.com/kelindar/binary"
 	"github.com/nutsdb/nutsdb"
 	"github.com/rs/zerolog/log"
 	"github.com/tdewolff/parse/v2"
@@ -55,58 +55,6 @@ type InstaData struct {
 	Medias   []Media
 }
 
-func (i *InstaData) Marshal(bb *bytebufferpool.ByteBuffer) {
-	n := unsafe.SizeString(i.PostID)
-	n += unsafe.SizeString(i.Username)
-	n += unsafe.SizeString(i.Caption)
-	for _, m := range i.Medias {
-		n += unsafe.SizeString(m.TypeName)
-		n += unsafe.SizeString(m.URL)
-	}
-	bb.B = make([]byte, n)
-	n = unsafe.MarshalString(i.PostID, bb.B)
-	n += unsafe.MarshalString(i.Username, bb.B[n:])
-	n += unsafe.MarshalString(i.Caption, bb.B[n:])
-	for _, m := range i.Medias {
-		n += unsafe.MarshalString(m.TypeName, bb.B[n:])
-		n += unsafe.MarshalString(m.URL, bb.B[n:])
-	}
-	return
-}
-
-func (i *InstaData) Unmarshal(bs []byte) (n int, err error) {
-	i.PostID, n, err = unsafe.UnmarshalString(bs)
-	if err != nil {
-		return
-	}
-	var n1 int
-	i.Username, n1, err = unsafe.UnmarshalString(bs[n:])
-	n += n1
-	if err != nil {
-		return
-	}
-	i.Caption, n1, err = unsafe.UnmarshalString(bs[n:])
-	n += n1
-	if err != nil {
-		return
-	}
-	for n < len(bs) {
-		var m Media
-		m.TypeName, n1, err = unsafe.UnmarshalString(bs[n:])
-		n += n1
-		if err != nil {
-			return
-		}
-		m.URL, n1, err = unsafe.UnmarshalString(bs[n:])
-		n += n1
-		if err != nil {
-			return
-		}
-		i.Medias = append(i.Medias, m)
-	}
-	return
-}
-
 func (i *InstaData) GetData(postID string) error {
 	var cacheInstaData []byte
 	err := DB.View(func(tx *nutsdb.Tx) error {
@@ -124,7 +72,7 @@ func (i *InstaData) GetData(postID string) error {
 	}
 
 	if len(cacheInstaData) > 0 {
-		_, err := i.Unmarshal(cacheInstaData)
+		err := binary.Unmarshal(cacheInstaData, i)
 		if err != nil {
 			return err
 		}
@@ -178,12 +126,11 @@ func (i *InstaData) GetData(postID string) error {
 		// Save data to cache
 		bb := bytebufferpool.Get()
 		defer bytebufferpool.Put(bb)
-		i.Marshal(bb)
+		err = binary.MarshalTo(i, bb)
 		if err != nil {
-			log.Error().Str("postID", postID).Err(err).Msg("Failed to marshal data")
 			return err
 		}
-		return tx.Put(bucket, utils.S2B(postID), bb.B, 24*60*60)
+		return tx.Put(bucket, utils.S2B(postID), bb.Bytes(), 24*60*60)
 	})
 	if err != nil {
 		log.Error().Str("postID", postID).Err(err).Msg("Failed to save data to cache")

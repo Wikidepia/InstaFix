@@ -8,7 +8,7 @@ require (
 	github.com/davidbyttow/govips/v2 v2.13.0
 	github.com/gofiber/fiber/v2 v2.49.1
 	github.com/gofiber/template/pug/v2 v2.1.4
-	github.com/mus-format/mus-go v0.1.4
+	github.com/kelindar/binary v1.0.18
 	github.com/nutsdb/nutsdb v0.14.1
 	github.com/rs/zerolog v1.31.0
 	github.com/tdewolff/parse/v2 v2.6.8
@@ -34,7 +34,6 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
-	github.com/mus-format/common-go v0.0.0-20230828235912-098b21ff73ae // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/stretchr/testify v1.8.4 // indirect
@@ -43,7 +42,6 @@ require (
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	github.com/xujiajun/mmap-go v1.0.1 // indirect
 	github.com/xujiajun/utils v0.0.0-20220904132955-5f7c5b914235 // indirect
-	golang.org/x/exp v0.0.0-20230321023759-10a507213a29 // indirect
 	golang.org/x/image v0.13.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
