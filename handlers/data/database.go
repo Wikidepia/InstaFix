@@ -1,18 +1,14 @@
 package handlers
 
 import (
-	"github.com/nutsdb/nutsdb"
+	"github.com/cockroachdb/pebble"
 )
 
-var DB *nutsdb.DB
+var DB *pebble.DB
 
 func InitDB() {
-	db, err := nutsdb.Open(
-		nutsdb.DefaultOptions,
-		nutsdb.WithDir("database"),
-		nutsdb.WithRWMode(nutsdb.MMap),
-		nutsdb.WithEntryIdxMode(nutsdb.HintKeyAndRAMIdxMode),
-	)
+	db, err := pebble.Open("database", &pebble.Options{})
+
 	if err != nil {
 		panic(err)
 	}

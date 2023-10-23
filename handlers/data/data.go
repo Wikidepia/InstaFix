@@ -11,8 +11,8 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/PurpleSec/escape"
+	"github.com/cockroachdb/pebble"
 	"github.com/kelindar/binary"
-	"github.com/nutsdb/nutsdb"
 	"github.com/rs/zerolog/log"
 	"github.com/tdewolff/parse/v2"
 	"github.com/tdewolff/parse/v2/js"
@@ -55,31 +55,27 @@ type InstaData struct {
 	Username []byte
 	Caption  []byte
 	Medias   []Media
+	Expire   uint32
 }
 
 func (i *InstaData) GetData(postID string) error {
-	var cacheInstaData []byte
-	err := DB.View(func(tx *nutsdb.Tx) error {
-		e, err := tx.Get(bucket, utils.S2B(postID))
-		if err != nil {
-			return err
-		}
-		cacheInstaData = e.Value
-		return nil
-	})
-
-	if err != nil && errors.Is(err, nutsdb.ErrBucketNotFound) {
+	cacheInstaData, closer, err := DB.Get(utils.S2B(postID))
+	if err != nil && err != pebble.ErrNotFound {
 		log.Error().Str("postID", postID).Err(err).Msg("Failed to get data from cache")
 		return err
 	}
 
 	if len(cacheInstaData) > 0 {
 		err := binary.Unmarshal(cacheInstaData, i)
+		closer.Close()
 		if err != nil {
 			return err
 		}
-		log.Info().Str("postID", postID).Msg("Data parsed from cache")
-		return nil
+		// Check if expired, if not return data from cache
+		if i.Expire > uint32(time.Now().Unix()) {
+			log.Info().Str("postID", postID).Msg("Data parsed from cache")
+			return nil
+		}
 	}
 
 	// Get data from Instagram
@@ -126,17 +122,13 @@ func (i *InstaData) GetData(postID string) error {
 		})
 	}
 
-	err = DB.Update(func(tx *nutsdb.Tx) error {
-		// Save data to cache
-		bb := bytebufferpool.Get()
-		defer bytebufferpool.Put(bb)
-		err = binary.MarshalTo(i, bb)
-		if err != nil {
-			return err
-		}
-		return tx.Put(bucket, utils.S2B(postID), bb.Bytes(), 24*60*60)
-	})
-	if err != nil {
+	// Set expire
+	i.Expire = uint32(time.Now().Add(24 * time.Hour).Unix())
+
+	bb := bytebufferpool.Get()
+	defer bytebufferpool.Put(bb)
+	err = binary.MarshalTo(i, bb)
+	if err := DB.Set(utils.S2B(postID), bb.Bytes(), pebble.Sync); err != nil {
 		log.Error().Str("postID", postID).Err(err).Msg("Failed to save data to cache")
 		return err
 	}
