@@ -43,6 +43,7 @@ var headers = http.Header{
 }
 var timeout = 10 * time.Second
 var bucket = "cache"
+var parserPool fastjson.ParserPool
 
 type Media struct {
 	TypeName string
@@ -82,7 +83,9 @@ func (i *InstaData) GetData(postID string) error {
 	}
 
 	// Get data from Instagram
-	data, err := getData(postID)
+	p := parserPool.Get()
+	defer parserPool.Put(p)
+	data, err := getData(postID, p)
 	if err != nil {
 		log.Error().Str("postID", postID).Err(err).Msg("Failed to get data from Instagram")
 		return err
@@ -140,7 +143,7 @@ func (i *InstaData) GetData(postID string) error {
 	return nil
 }
 
-func getData(postID string) (*fastjson.Value, error) {
+func getData(postID string, p *fastjson.Parser) (*fastjson.Value, error) {
 	client := http.Client{Transport: transport, Timeout: timeout}
 
 	req, err := http.NewRequest(http.MethodGet, "https://www.instagram.com/p/"+postID+"/embed/captioned/", nil)
@@ -173,7 +176,6 @@ func getData(postID string) (*fastjson.Value, error) {
 
 	// Pattern matching using LDE
 	l := &Line{}
-	var p fastjson.Parser
 
 	// TimeSliceImpl
 	ldeMatch := false
