@@ -3,9 +3,11 @@ package handlers
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"instafix/utils"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
@@ -17,6 +19,7 @@ import (
 	"github.com/tdewolff/parse/v2/js"
 	"github.com/valyala/bytebufferpool"
 	"github.com/valyala/fastjson"
+	"golang.org/x/net/html"
 )
 
 var transport = &http.Transport{
@@ -104,6 +107,7 @@ func (i *InstaData) GetData(postID string) error {
 	i.Username = utils.B2S(item.GetStringBytes("owner", "username"))
 
 	// Get caption
+	fmt.Println(string(item.GetStringBytes("edge_media_to_caption", "edges", "0", "node", "text")))
 	i.Caption = utils.B2S(item.GetStringBytes("edge_media_to_caption", "edges", "0", "node", "text"))
 
 	// Get medias
@@ -209,6 +213,31 @@ func getData(postID string) (*fastjson.Value, error) {
 	return embedHTMLData, nil
 }
 
+// Taken from https://github.com/PuerkitoBio/goquery
+// Modified to add new line every <br>
+func gqTextNewLine(s *goquery.Selection) string {
+	// Slightly optimized vs calling Each: no single selection object created
+	var sb strings.Builder
+	var f func(*html.Node)
+	f = func(n *html.Node) {
+		if n.Type == html.TextNode {
+			// Keep newlines and spaces, like jQuery
+			sb.WriteString(n.Data)
+		} else if n.Type == html.ElementNode && n.Data == "br" {
+			sb.WriteString("\n")
+		}
+		if n.FirstChild != nil {
+			for c := n.FirstChild; c != nil; c = c.NextSibling {
+				f(c)
+			}
+		}
+	}
+	for _, n := range s.Nodes {
+		f(n)
+	}
+	return sb.String()
+}
+
 func ParseEmbedHTML(embedHTML []byte) ([]byte, error) {
 	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(embedHTML))
 	if err != nil {
@@ -236,7 +265,7 @@ func ParseEmbedHTML(embedHTML []byte) ([]byte, error) {
 	if captionUsername.Length() > 0 {
 		captionUsername.Remove()
 	}
-	caption := doc.Find(".Caption").Text()
+	caption := gqTextNewLine(doc.Find(".Caption"))
 
 	// Totally safe 100% valid JSON 👍
 	return utils.S2B(`{
