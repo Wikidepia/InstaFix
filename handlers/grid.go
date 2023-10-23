@@ -1,12 +1,12 @@
 package handlers
 
 import (
+	"bytes"
 	data "instafix/handlers/data"
 	"instafix/utils"
 	"net"
 	"net/http"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -36,7 +36,7 @@ func Grid() fiber.Handler {
 		}
 
 		// Get data
-		item := &data.InstaData{PostID: postID}
+		item := &data.InstaData{}
 		err := item.GetData(postID)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -57,7 +57,7 @@ func Grid() fiber.Handler {
 		client := http.Client{Transport: transport, Timeout: timeout}
 		for _, media := range mediaList {
 			// Skip if not image
-			if !strings.Contains(media.TypeName, "Image") {
+			if !bytes.Contains(media.TypeName, []byte("Image")) {
 				continue
 			}
 			wg.Add(1)
@@ -65,7 +65,7 @@ func Grid() fiber.Handler {
 			go func(media data.Media) {
 				defer wg.Done()
 
-				req, err := http.NewRequest(http.MethodGet, media.URL, nil)
+				req, err := http.NewRequest(http.MethodGet, utils.B2S(media.URL), nil)
 				if err != nil {
 					return
 				}

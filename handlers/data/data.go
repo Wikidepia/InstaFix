@@ -46,14 +46,14 @@ var bucket = "cache"
 var parserPool fastjson.ParserPool
 
 type Media struct {
-	TypeName string
-	URL      string
+	TypeName []byte
+	URL      []byte
 }
 
 type InstaData struct {
-	PostID   string
-	Username string
-	Caption  string
+	PostID   []byte
+	Username []byte
+	Caption  []byte
 	Medias   []Media
 }
 
@@ -106,10 +106,10 @@ func (i *InstaData) GetData(postID string) error {
 	}
 
 	// Get username
-	i.Username = utils.B2S(item.GetStringBytes("owner", "username"))
+	i.Username = item.GetStringBytes("owner", "username")
 
 	// Get caption
-	i.Caption = utils.B2S(item.GetStringBytes("edge_media_to_caption", "edges", "0", "node", "text"))
+	i.Caption = item.GetStringBytes("edge_media_to_caption", "edges", "0", "node", "text")
 
 	// Get medias
 	for _, m := range media {
@@ -121,8 +121,8 @@ func (i *InstaData) GetData(postID string) error {
 			mediaURL = m.GetStringBytes("display_url")
 		}
 		i.Medias = append(i.Medias, Media{
-			TypeName: utils.B2S(m.GetStringBytes("__typename")),
-			URL:      utils.B2S(mediaURL),
+			TypeName: m.GetStringBytes("__typename"),
+			URL:      mediaURL,
 		})
 	}
 

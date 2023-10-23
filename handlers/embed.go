@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"instafix/utils"
 	"instafix/views"
 	"strconv"
@@ -33,7 +34,7 @@ func Embed() fiber.Handler {
 		}
 
 		// Get data
-		item := data.InstaData{PostID: postID}
+		item := data.InstaData{}
 		err = item.GetData(postID)
 		if err != nil {
 			viewsData.Description = "Post might not be available"
@@ -54,11 +55,11 @@ func Embed() fiber.Handler {
 		var sb strings.Builder
 		sb.Grow(32) // 32 bytes should be enough for most cases
 
-		viewsData.Title = "@" + item.Username
-		viewsData.Description = item.Caption
+		viewsData.Title = "@" + utils.B2S(item.Username)
+		viewsData.Description = utils.B2S(item.Caption)
 
 		typename := item.Medias[max(1, mediaNum)-1].TypeName
-		isImage := strings.Contains(typename, "Image")
+		isImage := bytes.Contains(typename, []byte("Image"))
 		if mediaNum == 0 && isImage {
 			viewsData.Card = "summary_large_image"
 			sb.WriteString("/grid/")
