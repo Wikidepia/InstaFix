@@ -36,7 +36,7 @@ func Embed() fiber.Handler {
 		item := data.InstaData{PostID: postID}
 		err = item.GetData(postID)
 		if err != nil {
-			viewsData.Description = "Failed to get data"
+			viewsData.Description = "Post might not be available"
 			views.Embed(viewsData, wr)
 			return nil
 		}
