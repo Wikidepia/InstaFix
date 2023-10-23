@@ -41,7 +41,7 @@ func main() {
 	zerolog.SetGlobalLevel(zerolog.ErrorLevel)
 
 	app.Get("/", func(c *fiber.Ctx) error {
-		c.Set("Content-Type", "text/html")
+		c.Set("Content-Type", "text/html; charset=utf-8")
 		wr := c.Response().BodyWriter()
 		views.Home(wr)
 		return nil
