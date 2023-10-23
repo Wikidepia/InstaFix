@@ -178,8 +178,7 @@ func getData(postID string) (*fastjson.Value, error) {
 	}
 
 	if ldeMatch {
-		timeSlice := append(utils.S2B("(["), l.GetTimeSliceImplValue()...)
-		lexer := js.NewLexer(parse.NewInputBytes(timeSlice))
+		lexer := js.NewLexer(parse.NewInputBytes(l.GetTimeSliceImplValue()))
 		for {
 			tt, text := lexer.Next()
 			if tt == js.ErrorToken {
@@ -191,6 +190,7 @@ func getData(postID string) (*fastjson.Value, error) {
 				unescapeData := utils.UnescapeJSONString(utils.B2S(text))
 				timeSlice, err := p.Parse(unescapeData)
 				if err != nil {
+					log.Error().Str("postID", postID).Err(err).Msg("Failed to parse data from TimeSliceImpl")
 					return nil, err
 				}
 				log.Info().Str("postID", postID).Msg("Data parsed from TimeSliceImpl")
@@ -201,6 +201,7 @@ func getData(postID string) (*fastjson.Value, error) {
 
 	embedHTML, err := ParseEmbedHTML(bb.Bytes())
 	if err != nil {
+		log.Error().Str("postID", postID).Err(err).Msg("Failed to parse data from ParseEmbedHTML")
 		return nil, err
 	}
 	embedHTMLData, err := p.ParseBytes(embedHTML)
