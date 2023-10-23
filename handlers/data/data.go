@@ -109,7 +109,7 @@ func (i *InstaData) GetData(postID string) error {
 	i.Username = item.GetStringBytes("owner", "username")
 
 	// Get caption
-	i.Caption = item.GetStringBytes("edge_media_to_caption", "edges", "0", "node", "text")
+	i.Caption = bytes.TrimSpace(item.GetStringBytes("edge_media_to_caption", "edges", "0", "node", "text"))
 
 	// Get medias
 	for _, m := range media {
