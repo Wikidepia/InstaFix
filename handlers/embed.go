@@ -36,8 +36,7 @@ func Embed() fiber.Handler {
 		}
 
 		// Return embed template
-		c.Set("Content-Type", "text/html")
-
+		c.Set("Content-Type", "text/html; charset=utf-8")
 		wr := c.Response().BodyWriter()
 
 		viewsData := &views.ViewsData{
