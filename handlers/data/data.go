@@ -165,9 +165,15 @@ func getData(postID string, p *fastjson.Parser) (*fastjson.Value, error) {
 	}
 
 	bb := bytebufferpool.Get()
-	defer bytebufferpool.Put(bb)
+	defer func() {
+		bytebufferpool.Put(bb)
+		res.Body.Close()
+	}()
+
 	_, err = bb.ReadFrom(res.Body)
-	defer res.Body.Close()
+	if err != nil {
+		return nil, err
+	}
 
 	// Check if contains "ebmMessage" (error message)
 	if bytes.Contains(bb.Bytes(), utils.S2B("ebmMessage")) {

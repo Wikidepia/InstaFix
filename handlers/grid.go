@@ -75,7 +75,11 @@ func Grid() fiber.Handler {
 				if err != nil {
 					return
 				}
+
 				buf, err := utils.ReadBody(res)
+				if err != nil {
+					return
+				}
 
 				image, err := vips.NewImageFromBuffer(buf)
 				if err != nil {
