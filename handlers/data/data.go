@@ -166,6 +166,11 @@ func getData(postID string) (*fastjson.Value, error) {
 	_, err = bb.ReadFrom(res.Body)
 	defer res.Body.Close()
 
+	// Check if contains "ebmMessage" (error message)
+	if bytes.Contains(bb.Bytes(), utils.S2B("ebmMessage")) {
+		return nil, errors.New("Post cannot be loaded")
+	}
+
 	// Pattern matching using LDE
 	l := &Line{}
 	var p fastjson.Parser
