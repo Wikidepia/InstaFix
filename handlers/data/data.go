@@ -3,7 +3,6 @@ package handlers
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"instafix/utils"
 	"net"
 	"net/http"
@@ -107,7 +106,6 @@ func (i *InstaData) GetData(postID string) error {
 	i.Username = utils.B2S(item.GetStringBytes("owner", "username"))
 
 	// Get caption
-	fmt.Println(string(item.GetStringBytes("edge_media_to_caption", "edges", "0", "node", "text")))
 	i.Caption = utils.B2S(item.GetStringBytes("edge_media_to_caption", "edges", "0", "node", "text"))
 
 	// Get medias
