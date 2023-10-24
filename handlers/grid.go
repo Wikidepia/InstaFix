@@ -76,6 +76,7 @@ func Grid() fiber.Handler {
 					return
 				}
 
+				defer res.Body.Close()
 				buf, err := utils.ReadBody(res)
 				if err != nil {
 					return

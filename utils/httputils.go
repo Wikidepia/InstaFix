@@ -10,7 +10,6 @@ import (
 // Originally from https://github.com/arangodb/go-driver (ArangoDB GmbH)
 // Apache-2.0 License
 func ReadBody(resp *http.Response) ([]byte, error) {
-	defer resp.Body.Close()
 	contentLength := resp.ContentLength
 	if contentLength < 0 {
 		// Don't know the content length, do it the slowest way
