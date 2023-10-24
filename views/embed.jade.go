@@ -27,6 +27,8 @@ const (
 	embed__21 = `"/><meta property="og:video:secure_url" content="`
 	embed__22 = `"/><meta property="og:video:type" content="video/mp4"/><meta property="og:video:width" content="`
 	embed__23 = `"/><meta property="og:video:height" content="`
+	embed__25 = `<link rel="alternate" href="`
+	embed__26 = `" type="application/json+oembed" title="`
 )
 
 func Embed(v *ViewsData, wr io.Writer) {
@@ -81,6 +83,13 @@ func Embed(v *ViewsData, wr io.Writer) {
 		WriteAll(v.Width, true, buffer)
 		buffer.WriteString(embed__23)
 		WriteAll(v.Height, true, buffer)
+		buffer.WriteString(embed__3)
+	}
+	if v.OEmbedURL != "" {
+		buffer.WriteString(embed__25)
+		WriteAll(v.OEmbedURL, false, buffer)
+		buffer.WriteString(embed__26)
+		WriteAll(v.Title, true, buffer)
 		buffer.WriteString(embed__3)
 	}
 	buffer.WriteString(embed__4)

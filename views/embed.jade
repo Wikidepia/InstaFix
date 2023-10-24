@@ -37,6 +37,9 @@ html(lang='en')
       meta(property='og:video:width', content=v.Width)
       meta(property='og:video:height', content=v.Height)
 
+    if (v.OEmbedURL != "")
+      link(rel='alternate', href!=v.OEmbedURL, type='application/json+oembed', title=v.Title)
+
     meta(http-equiv='refresh', content=`0; url = ${v.URL}`)
 
   body

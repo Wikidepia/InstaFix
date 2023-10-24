@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"instafix/utils"
 	"instafix/views"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -79,6 +80,7 @@ func Embed() fiber.Handler {
 			sb.WriteString("/")
 			sb.WriteString(strconv.Itoa(max(1, mediaNum)))
 			viewsData.VideoURL = sb.String()
+			viewsData.OEmbedURL = c.BaseURL() + "/oembed?text=" + url.QueryEscape(viewsData.Description) + "&url=" + url.QueryEscape(viewsData.URL)
 		}
 
 		views.Embed(viewsData, wr)

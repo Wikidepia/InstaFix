@@ -56,6 +56,7 @@ func main() {
 	app.Get("/images/:postID/:mediaNum", handlers.Images())
 	app.Get("/videos/:postID/:mediaNum", handlers.Videos())
 	app.Get("/grid/:postID", handlers.Grid())
+	app.Get("/oembed", handlers.OEmbed())
 
 	app.Listen("127.0.0.1:3000")
 }
