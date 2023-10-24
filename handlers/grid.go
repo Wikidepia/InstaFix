@@ -55,6 +55,7 @@ func Grid() fiber.Handler {
 		var mutex sync.Mutex
 
 		client := http.Client{Transport: transport, Timeout: timeout}
+		defer client.CloseIdleConnections()
 		for _, media := range mediaList {
 			// Skip if not image
 			if !bytes.Contains(media.TypeName, []byte("Image")) {
