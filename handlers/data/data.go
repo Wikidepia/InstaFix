@@ -42,8 +42,11 @@ var headers = http.Header{
 	"Sec-Fetch-Mode":  {"navigate"},
 }
 var timeout = 10 * time.Second
-var bucket = "cache"
 var parserPool fastjson.ParserPool
+
+var (
+	ErrNotFound = errors.New("post not found")
+)
 
 type Media struct {
 	TypeName []byte
@@ -83,7 +86,9 @@ func (i *InstaData) GetData(postID string) error {
 	defer parserPool.Put(p)
 	data, err := getData(postID, p)
 	if err != nil {
-		log.Error().Str("postID", postID).Err(err).Msg("Failed to get data from Instagram")
+		if err != ErrNotFound {
+			log.Error().Str("postID", postID).Err(err).Msg("Failed to get data from Instagram")
+		}
 		return err
 	}
 
@@ -169,7 +174,7 @@ func getData(postID string, p *fastjson.Parser) (*fastjson.Value, error) {
 
 	// Check if contains "ebmMessage" (error message)
 	if bytes.Contains(bb.Bytes(), utils.S2B("ebmMessage")) {
-		return nil, errors.New("Post cannot be loaded")
+		return nil, ErrNotFound
 	}
 
 	// Pattern matching using LDE
