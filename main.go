@@ -5,6 +5,7 @@ import (
 	data "instafix/handlers/data"
 	"instafix/views"
 
+	"github.com/ansrivas/fiberprometheus/v2"
 	"github.com/davidbyttow/govips/v2/vips"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/pprof"
@@ -28,6 +29,11 @@ func main() {
 	recoverConfig.EnableStackTrace = true
 	app.Use(recover.New(recoverConfig))
 	app.Use(pprof.New())
+
+	// Initialize Prometheus
+	prometheus := fiberprometheus.New("InstaFix")
+	prometheus.RegisterAt(app, "/metrics")
+	app.Use(prometheus.Middleware)
 
 	// Initialize VIPS
 	vips.Startup(nil)
