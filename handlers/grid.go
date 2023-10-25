@@ -22,7 +22,8 @@ var transport = &http.Transport{
 	TLSHandshakeTimeout:   5 * time.Second,
 	ResponseHeaderTimeout: 5 * time.Second,
 	ExpectContinueTimeout: 1 * time.Second,
-	MaxConnsPerHost:       1000,
+	MaxConnsPerHost:       10_000,
+	DisableKeepAlives:     true,
 }
 var timeout = 10 * time.Second
 
@@ -55,7 +56,6 @@ func Grid() fiber.Handler {
 		var mutex sync.Mutex
 
 		client := http.Client{Transport: transport, Timeout: timeout}
-		defer client.CloseIdleConnections()
 		for _, media := range mediaList {
 			// Skip if not image
 			if !bytes.Contains(media.TypeName, []byte("Image")) {
