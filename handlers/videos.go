@@ -13,25 +13,19 @@ func Videos() fiber.Handler {
 		postID := c.Params("postID")
 		mediaNum, err := c.ParamsInt("mediaNum", 1)
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": err.Error(),
-			})
+			return c.SendStatus(fiber.StatusInternalServerError)
 		}
 
 		// Get data
 		item := &data.InstaData{}
 		err = item.GetData(postID)
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": err.Error(),
-			})
+			return c.SendStatus(fiber.StatusInternalServerError)
 		}
 
 		// Redirect to image URL
 		if mediaNum > len(item.Medias) {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"error": "Media not found",
-			})
+			return c.SendStatus(fiber.StatusNotFound)
 		}
 		videoURL := utils.B2S(item.Medias[max(1, mediaNum)-1].URL)
 

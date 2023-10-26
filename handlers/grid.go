@@ -39,9 +39,7 @@ func Grid() fiber.Handler {
 		item := &data.InstaData{}
 		err := item.GetData(postID)
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": err.Error(),
-			})
+			return c.SendStatus(fiber.StatusInternalServerError)
 		}
 
 		// Only get first 4 images
@@ -97,9 +95,7 @@ func Grid() fiber.Handler {
 		wg.Wait()
 
 		if len(images) == 0 {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "no images found",
-			})
+			return c.SendStatus(fiber.StatusNotFound)
 		} else if len(images) == 1 {
 			return c.Redirect("/images/" + postID + "/1")
 		}
@@ -109,26 +105,20 @@ func Grid() fiber.Handler {
 		err = stem.ArrayJoin(images[1:], 2)
 		if err != nil {
 			log.Error().Str("postID", postID).Err(err).Msg("Failed to join images")
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": err.Error(),
-			})
+			return c.SendStatus(fiber.StatusInternalServerError)
 		}
 
 		// Export to static/ folder
 		imagesBuf, _, err := stem.ExportWebp(nil)
 		if err != nil {
 			log.Error().Str("postID", postID).Err(err).Msg("Failed to export grid image")
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": err.Error(),
-			})
+			return c.SendStatus(fiber.StatusInternalServerError)
 		}
 
 		// SAVE imagesBuf to static/ folder
 		f, err := os.Create("static/" + postID + ".webp")
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": err.Error(),
-			})
+			return c.SendStatus(fiber.StatusInternalServerError)
 		}
 		defer f.Close()
 		f.Write(imagesBuf)
