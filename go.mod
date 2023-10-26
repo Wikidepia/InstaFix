@@ -9,7 +9,6 @@ require (
 	github.com/cockroachdb/pebble v0.0.0-20231020221949-babd592d2360
 	github.com/davidbyttow/govips/v2 v2.13.0
 	github.com/gofiber/fiber/v2 v2.50.0
-	github.com/gofiber/template/pug/v2 v2.1.4
 	github.com/kelindar/binary v1.0.18
 	github.com/rs/zerolog v1.31.0
 	github.com/tdewolff/parse/v2 v2.6.8
@@ -21,8 +20,6 @@ require (
 
 require (
 	github.com/DataDog/zstd v1.4.5 // indirect
-	github.com/Joker/hpp v1.0.0 // indirect
-	github.com/Joker/jade v1.1.3 // indirect
 	github.com/andybalholm/brotli v1.0.6 // indirect
 	github.com/andybalholm/cascadia v1.3.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -33,8 +30,6 @@ require (
 	github.com/cockroachdb/tokenbucket v0.0.0-20230807174530-cc333fc44b06 // indirect
 	github.com/getsentry/sentry-go v0.18.0 // indirect
 	github.com/gofiber/adaptor/v2 v2.2.1 // indirect
-	github.com/gofiber/template v1.8.2 // indirect
-	github.com/gofiber/utils v1.1.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.3.1 // indirect

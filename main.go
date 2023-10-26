@@ -10,8 +10,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/pprof"
 	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/gofiber/template/pug/v2"
 	"github.com/rs/zerolog"
+	"github.com/valyala/bytebufferpool"
 )
 
 func init() {
@@ -19,11 +19,7 @@ func init() {
 }
 
 func main() {
-	engine := pug.New("./views", ".pug")
-
-	app := fiber.New(fiber.Config{
-		Views: engine,
-	})
+	app := fiber.New()
 
 	recoverConfig := recover.ConfigDefault
 	recoverConfig.EnableStackTrace = true
@@ -47,9 +43,11 @@ func main() {
 	zerolog.SetGlobalLevel(zerolog.ErrorLevel)
 
 	app.Get("/", func(c *fiber.Ctx) error {
+		viewsBuf := bytebufferpool.Get()
+		defer bytebufferpool.Put(viewsBuf)
 		c.Set("Content-Type", "text/html; charset=utf-8")
-		wr := c.Response().BodyWriter()
-		views.Home(wr)
+		views.Home(viewsBuf)
+		c.Response().SetBodyRaw(viewsBuf.Bytes())
 		return nil
 	})
 

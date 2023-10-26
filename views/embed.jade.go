@@ -3,7 +3,7 @@
 package views
 
 import (
-	"io"
+	pool "github.com/valyala/bytebufferpool"
 )
 
 const (
@@ -31,8 +31,7 @@ const (
 	embed__26 = `" type="application/json+oembed" title="`
 )
 
-func Embed(v *ViewsData, wr io.Writer) {
-	buffer := &WriterAsBuffer{wr}
+func Embed(v *ViewsData, buffer *pool.ByteBuffer) {
 
 	buffer.WriteString(embed__0)
 

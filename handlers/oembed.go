@@ -5,6 +5,7 @@ import (
 
 	"github.com/PurpleSec/escape"
 	"github.com/gofiber/fiber/v2"
+	"github.com/valyala/bytebufferpool"
 )
 
 func OEmbed() fiber.Handler {
@@ -14,16 +15,18 @@ func OEmbed() fiber.Handler {
 		if headingText == "" || headingURL == "" {
 			return c.SendStatus(fiber.StatusBadRequest)
 		}
-
 		c.Set("Content-Type", "application/json")
-		wr := c.Response().BodyWriter()
+		viewsBuf := bytebufferpool.Get()
+		defer bytebufferpool.Put(viewsBuf)
 
 		// Totally safe 100% valid template 👍
 		OEmbedData := &views.OEmbedData{
 			Text: escape.JSON(headingText),
 			URL:  headingURL,
 		}
-		views.OEmbed(OEmbedData, wr)
+
+		views.OEmbed(OEmbedData, viewsBuf)
+		c.Response().SetBodyRaw(viewsBuf.Bytes())
 		return nil
 	}
 }

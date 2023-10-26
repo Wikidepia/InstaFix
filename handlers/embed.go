@@ -11,19 +11,22 @@ import (
 	data "instafix/handlers/data"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/valyala/bytebufferpool"
 )
 
 func Embed() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		c.Set("Content-Type", "text/html; charset=utf-8")
-		wr := c.Response().BodyWriter()
 		viewsData := &views.ViewsData{}
+		viewsBuf := bytebufferpool.Get()
+		defer bytebufferpool.Put(viewsBuf)
 
 		postID := c.Params("postID")
 		mediaNum, err := c.ParamsInt("mediaNum", 0)
 		if err != nil {
 			viewsData.Description = "Invalid media number"
-			views.Embed(viewsData, wr)
+			views.Embed(viewsData, viewsBuf)
+			c.Response().SetBodyRaw(viewsBuf.Bytes())
 			return nil
 		}
 
@@ -39,17 +42,20 @@ func Embed() fiber.Handler {
 		err = item.GetData(postID)
 		if err != nil {
 			viewsData.Description = "Post might not be available"
-			views.Embed(viewsData, wr)
+			views.Embed(viewsData, viewsBuf)
+			c.Response().SetBodyRaw(viewsBuf.Bytes())
 			return nil
 		}
 
 		if mediaNum > len(item.Medias) {
 			viewsData.Description = "Media number out of range"
-			views.Embed(viewsData, wr)
+			views.Embed(viewsData, viewsBuf)
+			c.Response().SetBodyRaw(viewsBuf.Bytes())
 			return nil
 		} else if len(item.Username) == 0 {
 			viewsData.Description = "Post not found"
-			views.Embed(viewsData, wr)
+			views.Embed(viewsData, viewsBuf)
+			c.Response().SetBodyRaw(viewsBuf.Bytes())
 			return nil
 		}
 
@@ -82,8 +88,8 @@ func Embed() fiber.Handler {
 			viewsData.VideoURL = sb.String()
 			viewsData.OEmbedURL = c.BaseURL() + "/oembed?text=" + url.QueryEscape(viewsData.Description) + "&url=" + url.QueryEscape(viewsData.URL)
 		}
-
-		views.Embed(viewsData, wr)
+		views.Embed(viewsData, viewsBuf)
+		c.Response().SetBodyRaw(viewsBuf.Bytes())
 		return nil
 	}
 }

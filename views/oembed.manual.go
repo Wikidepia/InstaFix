@@ -2,9 +2,7 @@
 
 package views
 
-import (
-	"io"
-)
+import pool "github.com/valyala/bytebufferpool"
 
 const (
 	oembed__0 = `{"author_name": `
@@ -12,8 +10,7 @@ const (
 	oembed__2 = `","provider_name": "InstaFix","provider_url": "https://github.com/Wikidepia/InstaFix","title": "Instagram","type": "link","version": "1.0"}`
 )
 
-func OEmbed(o *OEmbedData, wr io.Writer) {
-	buffer := &WriterAsBuffer{wr}
+func OEmbed(o *OEmbedData, buffer *pool.ByteBuffer) {
 
 	buffer.WriteString(oembed__0)
 	WriteAll(o.Text, false, buffer) // Escape in handlers

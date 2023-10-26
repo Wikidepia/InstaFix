@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"io"
 	"strconv"
+	pool "github.com/valyala/bytebufferpool"
 )
 
 var (
@@ -12,7 +13,7 @@ var (
 	replacing = []string{"&lt;", "&gt;", "&#34;", "&#39;", "&amp;"}
 )
 
-func WriteEscString(st string, buffer *WriterAsBuffer) {
+func WriteEscString(st string, buffer *pool.ByteBuffer) {
 	for i := 0; i < len(st); i++ {
 		if n := bytes.IndexByte(escaped, st[i]); n >= 0 {
 			buffer.WriteString(replacing[n])
@@ -40,7 +41,7 @@ type stringer interface {
 	String() string
 }
 
-func WriteAll(a interface{}, escape bool, buffer *WriterAsBuffer) {
+func WriteAll(a interface{}, escape bool, buffer *pool.ByteBuffer) {
 	switch v := a.(type) {
 	case string:
 		if escape {
@@ -95,7 +96,7 @@ func ternary(condition bool, iftrue, iffalse interface{}) interface{} {
 
 // Used part of go source:
 // https://github.com/golang/go/blob/master/src/strconv/itoa.go
-func WriteUint(u uint64, buffer *WriterAsBuffer) {
+func WriteUint(u uint64, buffer *pool.ByteBuffer) {
 	var a [64 + 1]byte
 	i := len(a)
 
@@ -125,14 +126,14 @@ func WriteUint(u uint64, buffer *WriterAsBuffer) {
 	a[i] = byte(us + '0')
 	buffer.Write(a[i:])
 }
-func WriteInt(i int64, buffer *WriterAsBuffer) {
+func WriteInt(i int64, buffer *pool.ByteBuffer) {
 	if i < 0 {
 		buffer.WriteByte('-')
 		i = -i
 	}
 	WriteUint(uint64(i), buffer)
 }
-func WriteBool(b bool, buffer *WriterAsBuffer) {
+func WriteBool(b bool, buffer *pool.ByteBuffer) {
 	if b {
 		buffer.WriteString("true")
 		return
