@@ -22,7 +22,6 @@ var transport = &http.Transport{
 	TLSHandshakeTimeout:   5 * time.Second,
 	ResponseHeaderTimeout: 5 * time.Second,
 	ExpectContinueTimeout: 1 * time.Second,
-	MaxConnsPerHost:       10_000,
 	DisableKeepAlives:     true,
 }
 var timeout = 10 * time.Second

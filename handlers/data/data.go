@@ -30,7 +30,6 @@ var transport = &http.Transport{
 	ExpectContinueTimeout: 1 * time.Second,
 	// Disable HTTP keep-alives, needed for proxy
 	MaxIdleConnsPerHost: -1,
-	MaxConnsPerHost:     1000,
 	DisableKeepAlives:   true,
 	Proxy:               http.ProxyFromEnvironment,
 }
