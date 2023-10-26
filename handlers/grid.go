@@ -108,6 +108,7 @@ func Grid() fiber.Handler {
 
 		// Join images
 		stem := images[0]
+		defer stem.Close()
 		err = stem.ArrayJoin(images[1:], 2)
 		if err != nil {
 			log.Error().Str("postID", postID).Err(err).Msg("Failed to join images")
