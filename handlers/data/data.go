@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"instafix/utils"
-	"net"
-	"net/http"
 	"strings"
 	"time"
 
@@ -17,29 +15,13 @@ import (
 	"github.com/tdewolff/parse/v2"
 	"github.com/tdewolff/parse/v2/js"
 	"github.com/valyala/bytebufferpool"
+	"github.com/valyala/fasthttp"
+	"github.com/valyala/fasthttp/fasthttpproxy"
 	"github.com/valyala/fastjson"
 	"golang.org/x/net/html"
 )
 
-var transport = &http.Transport{
-	DialContext: (&net.Dialer{
-		Timeout: 5 * time.Second,
-	}).DialContext,
-	TLSHandshakeTimeout:   time.Minute,
-	ResponseHeaderTimeout: time.Minute,
-	ExpectContinueTimeout: 1 * time.Second,
-	// Disable HTTP keep-alives, needed for proxy
-	MaxIdleConnsPerHost: -1,
-	DisableKeepAlives:   true,
-	Proxy:               http.ProxyFromEnvironment,
-}
-var headers = http.Header{
-	"Accept":          {"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8"},
-	"Accept-Language": {"en-US,en;q=0.9"},
-	"Accept-Encoding": {"identity"},
-	"User-Agent":      {"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)"},
-	"Sec-Fetch-Mode":  {"navigate"},
-}
+var client = &fasthttp.Client{Dial: fasthttpproxy.FasthttpProxyHTTPDialer(), ReadBufferSize: 16 * 1024}
 var timeout = 10 * time.Second
 var parserPool fastjson.ParserPool
 
@@ -141,18 +123,23 @@ func (i *InstaData) GetData(postID string) error {
 }
 
 func getData(postID string, p *fastjson.Parser) (*fastjson.Value, error) {
-	client := http.Client{Transport: transport, Timeout: timeout}
+	req, res := fasthttp.AcquireRequest(), fasthttp.AcquireResponse()
+	defer func() {
+		fasthttp.ReleaseRequest(req)
+		fasthttp.ReleaseResponse(res)
+	}()
 
-	req, err := http.NewRequest(http.MethodGet, "https://www.instagram.com/p/"+postID+"/embed/captioned/", nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header = headers
+	req.Header.SetMethod("GET")
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
+	req.Header.Set("Connection", "close")
+	req.Header.Set("Sec-Fetch-Mode", "navigate")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36")
+	req.SetRequestURI("https://www.instagram.com/p/" + postID + "/embed/captioned/")
 
-	var res *http.Response
+	var err error
 	for retries := 0; retries < 3; retries++ {
-		// Make request client.Get
-		res, err = client.Do(req)
+		err := client.DoTimeout(req, res, timeout)
 		if err == nil {
 			break
 		}
@@ -161,19 +148,8 @@ func getData(postID string, p *fastjson.Parser) (*fastjson.Value, error) {
 		return nil, err
 	}
 
-	bb := bytebufferpool.Get()
-	defer func() {
-		bytebufferpool.Put(bb)
-		res.Body.Close()
-	}()
-
-	_, err = bb.ReadFrom(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
 	// Check if contains "ebmMessage" (error message)
-	if bytes.Contains(bb.Bytes(), utils.S2B("ebmMessage")) {
+	if bytes.Contains(res.Body(), utils.S2B("ebmMessage")) {
 		return nil, ErrNotFound
 	}
 
@@ -182,7 +158,7 @@ func getData(postID string, p *fastjson.Parser) (*fastjson.Value, error) {
 
 	// TimeSliceImpl
 	ldeMatch := false
-	for _, line := range bytes.Split(bb.Bytes(), utils.S2B("\n")) {
+	for _, line := range bytes.Split(res.Body(), utils.S2B("\n")) {
 		// Check if line contains TimeSliceImpl
 		ldeMatch, _ = l.Extract(line)
 	}
@@ -209,7 +185,7 @@ func getData(postID string, p *fastjson.Parser) (*fastjson.Value, error) {
 		}
 	}
 
-	embedHTML, err := ParseEmbedHTML(bb.Bytes())
+	embedHTML, err := ParseEmbedHTML(res.Body())
 	if err != nil {
 		log.Error().Str("postID", postID).Err(err).Msg("Failed to parse data from ParseEmbedHTML")
 		return nil, err

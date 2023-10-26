@@ -14,6 +14,7 @@ require (
 	github.com/rs/zerolog v1.31.0
 	github.com/tdewolff/parse/v2 v2.6.8
 	github.com/valyala/bytebufferpool v1.0.0
+	github.com/valyala/fasthttp v1.50.0
 	github.com/valyala/fastjson v1.6.4
 	golang.org/x/net v0.17.0
 )
@@ -52,7 +53,6 @@ require (
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/stretchr/testify v1.8.4 // indirect
-	github.com/valyala/fasthttp v1.50.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df // indirect
 	golang.org/x/image v0.13.0 // indirect
