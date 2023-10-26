@@ -94,6 +94,12 @@ func Grid() fiber.Handler {
 		}
 		wg.Wait()
 
+		defer func() {
+			for _, image := range images {
+				image.Close()
+			}
+		}()
+
 		if len(images) == 0 {
 			return c.SendStatus(fiber.StatusNotFound)
 		} else if len(images) == 1 {
