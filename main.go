@@ -32,7 +32,11 @@ func main() {
 	app.Use(prometheus.Middleware)
 
 	// Initialize VIPS
-	vips.Startup(nil)
+	vips.Startup(&vips.Config{
+		MaxCacheFiles: 0,
+		MaxCacheMem:   0,
+		MaxCacheSize:  0,
+	})
 	defer vips.Shutdown()
 
 	// Close buntdb when app closes
