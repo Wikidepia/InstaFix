@@ -29,6 +29,13 @@ func Embed() fiber.Handler {
 			c.Response().SetBodyRaw(viewsBuf.Bytes())
 			return nil
 		}
+		direct, err := strconv.ParseBool(c.Query("direct", "false"))
+		if err != nil {
+			viewsData.Description = "Invalid direct parameter"
+			views.Embed(viewsData, viewsBuf)
+			c.Response().SetBodyRaw(viewsBuf.Bytes())
+			return nil
+		}
 
 		// If User-Agent is not bot, redirect to Instagram
 		viewsData.Title = "InstaFix"
@@ -88,6 +95,11 @@ func Embed() fiber.Handler {
 			viewsData.VideoURL = sb.String()
 			viewsData.OEmbedURL = c.BaseURL() + "/oembed?text=" + url.QueryEscape(viewsData.Description) + "&url=" + url.QueryEscape(viewsData.URL)
 		}
+
+		if direct {
+			return c.Redirect(sb.String())
+		}
+
 		views.Embed(viewsData, viewsBuf)
 		c.Response().SetBodyRaw(viewsBuf.Bytes())
 		return nil
