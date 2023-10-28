@@ -88,8 +88,8 @@ func Grid() fiber.Handler {
 
 				// Append image
 				mutex.Lock()
-				images = append(images, image)
 				defer mutex.Unlock()
+				images = append(images, image)
 			}(media)
 		}
 		wg.Wait()
