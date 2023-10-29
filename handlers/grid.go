@@ -14,7 +14,6 @@ import (
 	"github.com/davidbyttow/govips/v2/vips"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog/log"
-	"go.uber.org/ratelimit"
 )
 
 var transport = &http.Transport{
@@ -27,7 +26,6 @@ var transport = &http.Transport{
 	DisableKeepAlives:     true,
 }
 var timeout = 10 * time.Second
-var rl = ratelimit.New(2)
 
 func Grid() fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -49,9 +47,6 @@ func Grid() fiber.Handler {
 		if len(item.Medias) == 1 {
 			return c.Redirect("/images/" + postID + "/1")
 		}
-
-		// Rate limit generation to 2 per second
-		rl.Take()
 
 		var images []*vips.ImageRef
 		var wg sync.WaitGroup
