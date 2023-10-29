@@ -68,7 +68,7 @@ func Grid() fiber.Handler {
 
 			go func(media data.Media) {
 				defer wg.Done()
-				req, err := http.NewRequest(http.MethodGet, utils.B2S(media.URL), nil)
+				req, err := http.NewRequest(http.MethodGet, utils.B2S(media.URL), http.NoBody)
 				if err != nil {
 					return
 				}

@@ -74,19 +74,20 @@ func Embed() fiber.Handler {
 
 		typename := item.Medias[max(1, mediaNum)-1].TypeName
 		isImage := bytes.Contains(typename, []byte("Image"))
-		if mediaNum == 0 && isImage {
+		switch {
+		case mediaNum == 0 && isImage:
 			viewsData.Card = "summary_large_image"
 			sb.WriteString("/grid/")
 			sb.WriteString(postID)
 			viewsData.ImageURL = sb.String()
-		} else if isImage {
+		case isImage:
 			viewsData.Card = "summary_large_image"
 			sb.WriteString("/images/")
 			sb.WriteString(postID)
 			sb.WriteString("/")
 			sb.WriteString(strconv.Itoa(max(1, mediaNum)))
 			viewsData.ImageURL = sb.String()
-		} else {
+		default:
 			viewsData.Card = "player"
 			sb.WriteString("/videos/")
 			sb.WriteString(postID)
