@@ -4,6 +4,7 @@ import (
 	"bytes"
 	data "instafix/handlers/data"
 	"instafix/utils"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -67,7 +68,6 @@ func Grid() fiber.Handler {
 
 			go func(media data.Media) {
 				defer wg.Done()
-
 				req, err := http.NewRequest(http.MethodGet, utils.B2S(media.URL), nil)
 				if err != nil {
 					return
@@ -80,16 +80,18 @@ func Grid() fiber.Handler {
 				}
 
 				defer res.Body.Close()
-				buf, err := utils.ReadBody(res)
+				buf := new(bytes.Buffer)
+				_, err = io.Copy(buf, res.Body)
 				if err != nil {
 					return
 				}
 
-				image, err := vips.NewImageFromBuffer(buf)
+				image, err := vips.NewImageFromBuffer(buf.Bytes())
 				if err != nil {
 					log.Error().Str("postID", postID).Err(err).Msg("Failed to create image from buffer")
 					return
 				}
+				buf.Reset()
 
 				// Append image
 				mutex.Lock()
