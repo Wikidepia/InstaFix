@@ -6,7 +6,6 @@ import (
 	"instafix/views"
 
 	"github.com/ansrivas/fiberprometheus/v2"
-	"github.com/davidbyttow/govips/v2/vips"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/pprof"
 	"github.com/gofiber/fiber/v2/middleware/recover"
@@ -30,14 +29,6 @@ func main() {
 	prometheus := fiberprometheus.New("InstaFix")
 	prometheus.RegisterAt(app, "/metrics")
 	app.Use(prometheus.Middleware)
-
-	// Initialize VIPS
-	vips.Startup(&vips.Config{
-		MaxCacheFiles: 0,
-		MaxCacheMem:   0,
-		MaxCacheSize:  0,
-	})
-	defer vips.Shutdown()
 
 	// Close buntdb when app closes
 	defer data.DB.Close()

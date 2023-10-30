@@ -7,7 +7,6 @@ require (
 	github.com/PurpleSec/escape v1.0.0
 	github.com/ansrivas/fiberprometheus/v2 v2.6.1
 	github.com/cockroachdb/pebble v0.0.0-20231020221949-babd592d2360
-	github.com/davidbyttow/govips/v2 v2.13.0
 	github.com/gofiber/fiber/v2 v2.50.0
 	github.com/kelindar/binary v1.0.18
 	github.com/ozankasikci/go-image-merge v0.2.3-0.20220620190453-66fdff081378
@@ -51,7 +50,6 @@ require (
 	github.com/stretchr/testify v1.8.4 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df // indirect
-	golang.org/x/image v0.13.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
