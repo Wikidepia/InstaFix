@@ -2,18 +2,20 @@ package handlers
 
 import (
 	"bytes"
+	"image/jpeg"
 	data "instafix/handlers/data"
 	"instafix/utils"
 	"io"
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
 
-	"github.com/davidbyttow/govips/v2/vips"
 	"github.com/gofiber/fiber/v2"
-	"github.com/rs/zerolog/log"
+	gim "github.com/ozankasikci/go-image-merge"
 )
 
 var transport = &http.Transport{
@@ -30,10 +32,11 @@ var timeout = 10 * time.Second
 func Grid() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		postID := c.Params("postID")
+		gridFname := filepath.Join("static", postID+".jpeg")
 
 		// If already exists, return
-		if _, err := os.Stat("static/" + postID + ".webp"); err == nil {
-			return c.SendFile("static/" + postID + ".webp")
+		if _, err := os.Stat(gridFname); err == nil {
+			return c.SendFile(gridFname)
 		}
 
 		// Get data
@@ -48,20 +51,26 @@ func Grid() fiber.Handler {
 			return c.Redirect("/images/" + postID + "/1")
 		}
 
-		var images []*vips.ImageRef
+		var images []*gim.Grid
 		var wg sync.WaitGroup
 		var mutex sync.Mutex
 
+		dirname, err := os.MkdirTemp("static", postID+"*")
+		if err != nil {
+			return c.SendStatus(fiber.StatusInternalServerError)
+		}
+		defer os.RemoveAll(dirname)
+
 		mediaList := item.Medias[:min(4, len(item.Medias))]
 		client := http.Client{Transport: transport, Timeout: timeout}
-		for _, media := range mediaList {
+		for i, media := range mediaList {
 			// Skip if not image
 			if !bytes.Contains(media.TypeName, []byte("Image")) {
 				continue
 			}
 			wg.Add(1)
 
-			go func(media data.Media) {
+			go func(i int, media data.Media) {
 				defer wg.Done()
 				req, err := http.NewRequest(http.MethodGet, utils.B2S(media.URL), http.NoBody)
 				if err != nil {
@@ -74,33 +83,25 @@ func Grid() fiber.Handler {
 					return
 				}
 
-				defer res.Body.Close()
-				buf := new(bytes.Buffer)
-				_, err = io.Copy(buf, res.Body)
+				fname := filepath.Join(dirname, strconv.Itoa(i)+".jpg")
+				file, err := os.Create(fname)
 				if err != nil {
 					return
 				}
 
-				image, err := vips.NewImageFromBuffer(buf.Bytes())
+				defer res.Body.Close()
+				_, err = io.Copy(file, res.Body)
 				if err != nil {
-					log.Error().Str("postID", postID).Err(err).Msg("Failed to create image from buffer")
 					return
 				}
-				buf.Reset()
 
 				// Append image
 				mutex.Lock()
 				defer mutex.Unlock()
-				images = append(images, image)
-			}(media)
+				images = append(images, &gim.Grid{ImageFilePath: fname})
+			}(i, media)
 		}
 		wg.Wait()
-
-		defer func() {
-			for _, image := range images {
-				image.Close()
-			}
-		}()
 
 		if len(images) == 0 {
 			return c.SendStatus(fiber.StatusNotFound)
@@ -108,30 +109,23 @@ func Grid() fiber.Handler {
 			return c.Redirect("/images/" + postID + "/1")
 		}
 
-		// Join images
-		stem := images[0]
-		defer stem.Close()
-		err = stem.ArrayJoin(images[1:], 2)
+		countY := 1
+		if len(images) > 2 {
+			countY = 2
+		}
+		grid, err := gim.New(images, 2, countY).Merge()
 		if err != nil {
-			log.Error().Str("postID", postID).Err(err).Msg("Failed to join images")
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
 
-		// Export to static/ folder
-		imagesBuf, _, err := stem.ExportWebp(nil)
-		if err != nil {
-			log.Error().Str("postID", postID).Err(err).Msg("Failed to export grid image")
-			return c.SendStatus(fiber.StatusInternalServerError)
-		}
-
-		// SAVE imagesBuf to static/ folder
-		f, err := os.Create("static/" + postID + ".webp")
+		// Write grid to static folder
+		f, err := os.Create(gridFname)
 		if err != nil {
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
 		defer f.Close()
-		f.Write(imagesBuf)
+		jpeg.Encode(f, grid, &jpeg.Options{Quality: 75})
 
-		return c.SendFile("static/" + postID + ".webp")
+		return c.SendFile(gridFname)
 	}
 }

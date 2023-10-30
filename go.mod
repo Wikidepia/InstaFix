@@ -10,6 +10,7 @@ require (
 	github.com/davidbyttow/govips/v2 v2.13.0
 	github.com/gofiber/fiber/v2 v2.50.0
 	github.com/kelindar/binary v1.0.18
+	github.com/ozankasikci/go-image-merge v0.2.3-0.20220620190453-66fdff081378
 	github.com/rs/zerolog v1.31.0
 	github.com/tdewolff/parse/v2 v2.6.8
 	github.com/valyala/bytebufferpool v1.0.0
