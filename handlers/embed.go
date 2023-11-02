@@ -14,6 +14,19 @@ import (
 	"github.com/valyala/bytebufferpool"
 )
 
+func mediaidToCode(mediaID int) string {
+	alphabet := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+	var shortCode string
+
+	for mediaID > 0 {
+		remainder := mediaID % 64
+		mediaID /= 64
+		shortCode = string(alphabet[remainder]) + shortCode
+	}
+
+	return shortCode
+}
+
 func Embed() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		c.Set("Content-Type", "text/html; charset=utf-8")
@@ -35,6 +48,18 @@ func Embed() fiber.Handler {
 			views.Embed(viewsData, viewsBuf)
 			c.Response().SetBodyRaw(viewsBuf.Bytes())
 			return nil
+		}
+
+		// Stories use mediaID (int) instead of postID
+		if strings.Contains(c.Path(), "/stories/") {
+			mediaID, err := strconv.Atoi(postID)
+			if err != nil {
+				viewsData.Description = "Invalid postID"
+				views.Embed(viewsData, viewsBuf)
+				c.Send(viewsBuf.Bytes())
+				return nil
+			}
+			postID = mediaidToCode(mediaID)
 		}
 
 		// If User-Agent is not bot, redirect to Instagram
@@ -73,9 +98,9 @@ func Embed() fiber.Handler {
 		viewsData.Description = utils.B2S(item.Caption)
 
 		typename := item.Medias[max(1, mediaNum)-1].TypeName
-		isImage := bytes.Contains(typename, []byte("Image"))
+		isImage := bytes.Contains(typename, []byte("Image")) || bytes.Contains(typename, []byte("StoryVideo"))
 		switch {
-		case mediaNum == 0 && isImage:
+		case mediaNum == 0 && isImage && len(item.Medias) > 1:
 			viewsData.Card = "summary_large_image"
 			sb.WriteString("/grid/")
 			sb.WriteString(postID)

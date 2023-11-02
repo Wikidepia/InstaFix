@@ -47,10 +47,12 @@ func main() {
 	})
 
 	// GET /p/Cw8X2wXPjiM
+	// GET /stories/fatfatpankocat/3226148677671954631/
 	app.Get("/p/:postID/", handlers.Embed())
 	app.Get("/tv/:postID", handlers.Embed())
 	app.Get("/reel/:postID", handlers.Embed())
 	app.Get("/reels/:postID", handlers.Embed())
+	app.Get("/stories/:username/:postID", handlers.Embed())
 	app.Get("/p/:postID/:mediaNum", handlers.Embed())
 	app.Get("/images/:postID/:mediaNum", handlers.Images())
 	app.Get("/videos/:postID/:mediaNum", handlers.Videos())
