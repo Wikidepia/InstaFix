@@ -208,10 +208,7 @@ func getData(postID string, p *fastjson.Parser) (*fastjson.Value, error) {
 			return nil, err
 		}
 		gqlData, err := p.ParseBytes(gqlValue)
-		if err != nil {
-			return nil, err
-		}
-		if gqlData.Exists("data") {
+		if err == nil && gqlData.Exists("data") {
 			log.Info().Str("postID", postID).Msg("Data parsed from parseGQLData")
 			return gqlData.Get("data"), nil
 		}
