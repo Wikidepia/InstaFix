@@ -202,7 +202,7 @@ func getData(postID string, p *fastjson.Parser) (*fastjson.Value, error) {
 
 	// Scrape from GraphQL API
 	if videoBlocked || len(username) == 0 {
-		gqlValue, err := parseGQLData(postID)
+		gqlValue, err := parseGQLData(postID, req, res)
 		if err != nil {
 			log.Error().Str("postID", postID).Err(err).Msg("Failed to parse data from parseGQLData")
 			return nil, err
@@ -295,12 +295,9 @@ func ParseEmbedHTML(embedHTML []byte) ([]byte, error) {
 	}`), nil
 }
 
-func parseGQLData(postID string) ([]byte, error) {
-	req, res := fasthttp.AcquireRequest(), fasthttp.AcquireResponse()
-	defer func() {
-		fasthttp.ReleaseRequest(req)
-		fasthttp.ReleaseResponse(res)
-	}()
+func parseGQLData(postID string, req *fasthttp.Request, res *fasthttp.Response) ([]byte, error) {
+	req.Reset()
+	res.Reset()
 
 	req.Header.SetMethod("GET")
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
@@ -317,9 +314,5 @@ func parseGQLData(postID string) ([]byte, error) {
 	if err := client.Do(req, res); err != nil {
 		return nil, err
 	}
-
-	// Copy body to new buffer
-	body := make([]byte, len(res.Body()))
-	copy(body, res.Body())
-	return body, nil
+	return res.Body(), nil
 }
