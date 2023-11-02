@@ -15,7 +15,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/tdewolff/parse/v2"
 	"github.com/tdewolff/parse/v2/js"
-	"github.com/valyala/bytebufferpool"
 	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttp/fasthttpproxy"
 	"github.com/valyala/fastjson"
@@ -113,10 +112,13 @@ func (i *InstaData) GetData(postID string) error {
 	// Set expire
 	i.Expire = uint32(time.Now().Add(24 * time.Hour).Unix())
 
-	bb := bytebufferpool.Get()
-	defer bytebufferpool.Put(bb)
-	err = binary.MarshalTo(i, bb)
-	if err := DB.Set(utils.S2B(postID), bb.Bytes(), pebble.Sync); err != nil {
+	bb, err := binary.Marshal(i)
+	if err != nil {
+		log.Error().Str("postID", postID).Err(err).Msg("Failed to marshal data")
+		return err
+	}
+
+	if err := DB.Set(utils.S2B(postID), bb, pebble.Sync); err != nil {
 		log.Error().Str("postID", postID).Err(err).Msg("Failed to save data to cache")
 		return err
 	}
