@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"instafix/utils"
+	"strconv"
 	"strings"
 	"time"
 
@@ -194,6 +195,16 @@ func getData(postID string, p *fastjson.Parser) (*fastjson.Value, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if !embedHTMLData.GetBool("graphql", "shortcode_media", "video_blocked") {
+		gqlData, err := parseGQLData(postID)
+		if err != nil {
+			log.Error().Str("postID", postID).Err(err).Msg("Failed to parse data from parseGQLData")
+			return nil, err
+		}
+		log.Info().Str("postID", postID).Msg("Data parsed from parseGQLData")
+		return gqlData, nil
+	}
 	log.Info().Str("postID", postID).Msg("Data parsed from ParseEmbedHTML")
 	return embedHTMLData, nil
 }
@@ -252,13 +263,45 @@ func ParseEmbedHTML(embedHTML []byte) ([]byte, error) {
 	}
 	caption := gqTextNewLine(doc.Find(".Caption"))
 
+	// Check if contains WatchOnInstagram
+	videoBlocked := strconv.FormatBool(bytes.Contains(embedHTML, utils.S2B("WatchOnInstagram")))
+
 	// Totally safe 100% valid JSON 👍
 	return utils.S2B(`{
 		"shortcode_media": {
 			"owner": {"username": "` + username + `"},
 			"node": {"__typename": "` + typename + `", "display_url": "` + mediaURL + `"},
 			"edge_media_to_caption": {"edges": [{"node": {"text": ` + escape.JSON(caption) + `}}]},
-			"dimensions": {"height": null, "width": null}
+			"dimensions": {"height": null, "width": null},
+			"video_blocked": ` + videoBlocked + `
 		}
 	}`), nil
+}
+
+func parseGQLData(postID string) (*fastjson.Value, error) {
+	req, res := fasthttp.AcquireRequest(), fasthttp.AcquireResponse()
+	defer fasthttp.ReleaseRequest(req)
+	defer fasthttp.ReleaseResponse(res)
+
+	req.Header.SetMethod("GET")
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
+	req.Header.Set("Connection", "close")
+	req.Header.Set("Sec-Fetch-Mode", "navigate")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36")
+	req.Header.Set("Referer", "https://www.instagram.com/p/"+postID+"/")
+
+	req.SetRequestURI("https://www.instagram.com/graphql/query/")
+	req.URI().QueryArgs().Add("query_hash", "b3055c01b4b222b8a47dc12b090e4e64")
+	req.URI().QueryArgs().Add("variables", "{\"shortcode\":\""+postID+"\"}")
+
+	if err := client.Do(req, res); err != nil {
+		return nil, err
+	}
+
+	p := parserPool.Get()
+	defer parserPool.Put(p)
+
+	data, err := p.ParseBytes(res.Body())
+	return data.Get("data"), err
 }
