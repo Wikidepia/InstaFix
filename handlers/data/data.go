@@ -186,6 +186,7 @@ func getData(postID string, p *fastjson.Parser) (*fastjson.Value, error) {
 		}
 	}
 
+	// Parse embed HTML
 	embedHTML, err := ParseEmbedHTML(res.Body())
 	if err != nil {
 		log.Error().Str("postID", postID).Err(err).Msg("Failed to parse data from ParseEmbedHTML")
@@ -196,14 +197,21 @@ func getData(postID string, p *fastjson.Parser) (*fastjson.Value, error) {
 		return nil, err
 	}
 
+	// Scrape from GraphQL API
 	if !embedHTMLData.GetBool("graphql", "shortcode_media", "video_blocked") {
-		gqlData, err := parseGQLData(postID)
+		gqlValue, err := parseGQLData(postID)
 		if err != nil {
 			log.Error().Str("postID", postID).Err(err).Msg("Failed to parse data from parseGQLData")
 			return nil, err
 		}
-		log.Info().Str("postID", postID).Msg("Data parsed from parseGQLData")
-		return gqlData, nil
+		gqlData, err := p.ParseBytes(gqlValue)
+		if err != nil {
+			return nil, err
+		}
+		if gqlData.Exists("data") {
+			log.Info().Str("postID", postID).Msg("Data parsed from parseGQLData")
+			return gqlData.Get("data"), nil
+		}
 	}
 	log.Info().Str("postID", postID).Msg("Data parsed from ParseEmbedHTML")
 	return embedHTMLData, nil
@@ -278,10 +286,12 @@ func ParseEmbedHTML(embedHTML []byte) ([]byte, error) {
 	}`), nil
 }
 
-func parseGQLData(postID string) (*fastjson.Value, error) {
+func parseGQLData(postID string) ([]byte, error) {
 	req, res := fasthttp.AcquireRequest(), fasthttp.AcquireResponse()
-	defer fasthttp.ReleaseRequest(req)
-	defer fasthttp.ReleaseResponse(res)
+	defer func() {
+		fasthttp.ReleaseRequest(req)
+		fasthttp.ReleaseResponse(res)
+	}()
 
 	req.Header.SetMethod("GET")
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
@@ -298,10 +308,5 @@ func parseGQLData(postID string) (*fastjson.Value, error) {
 	if err := client.Do(req, res); err != nil {
 		return nil, err
 	}
-
-	p := parserPool.Get()
-	defer parserPool.Put(p)
-
-	data, err := p.ParseBytes(res.Body())
-	return data.Get("data"), err
+	return res.Body(), nil
 }
