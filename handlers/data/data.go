@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"instafix/utils"
 	"strconv"
 	"strings"
@@ -87,6 +88,8 @@ func (i *InstaData) GetData(postID string) error {
 		media = item.GetArray("edge_sidecar_to_children", "edges")
 	}
 
+	i.PostID = utils.S2B(postID)
+
 	// Get username
 	i.Username = item.GetStringBytes("owner", "username")
 
@@ -112,6 +115,7 @@ func (i *InstaData) GetData(postID string) error {
 	// Set expire
 	i.Expire = uint32(time.Now().Add(24 * time.Hour).Unix())
 
+	fmt.Printf("%+v\n", i)
 	bb, err := binary.Marshal(i)
 	if err != nil {
 		log.Error().Str("postID", postID).Err(err).Msg("Failed to marshal data")
