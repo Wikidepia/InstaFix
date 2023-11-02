@@ -149,11 +149,6 @@ func getData(postID string, p *fastjson.Parser) (*fastjson.Value, error) {
 		return nil, err
 	}
 
-	// Check if contains "ebmMessage" (error message)
-	if bytes.Contains(res.Body(), []byte("ebmMessage")) {
-		return nil, ErrNotFound
-	}
-
 	// Pattern matching using LDE
 	l := &Line{}
 
@@ -197,8 +192,12 @@ func getData(postID string, p *fastjson.Parser) (*fastjson.Value, error) {
 		return nil, err
 	}
 
+	smedia := embedHTMLData.Get("shortcode_media")
+	videoBlocked := smedia.GetBool("video_blocked")
+	username := smedia.GetStringBytes("owner", "username")
+
 	// Scrape from GraphQL API
-	if !embedHTMLData.GetBool("graphql", "shortcode_media", "video_blocked") {
+	if videoBlocked || len(username) == 0 {
 		gqlValue, err := parseGQLData(postID)
 		if err != nil {
 			log.Error().Str("postID", postID).Err(err).Msg("Failed to parse data from parseGQLData")
@@ -213,6 +212,12 @@ func getData(postID string, p *fastjson.Parser) (*fastjson.Value, error) {
 			return gqlData.Get("data"), nil
 		}
 	}
+
+	// Check if contains "ebmMessage" (error message)
+	if bytes.Contains(res.Body(), []byte("ebmMessage")) {
+		return nil, ErrNotFound
+	}
+
 	log.Info().Str("postID", postID).Msg("Data parsed from ParseEmbedHTML")
 	return embedHTMLData, nil
 }
