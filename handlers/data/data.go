@@ -186,7 +186,7 @@ func getData(postID string, p *fastjson.Parser) (*fastjson.Value, error) {
 	}
 
 	// Parse embed HTML
-	embedHTML, err := ParseEmbedHTML(res.Body())
+	embedHTML, err := parseEmbedHTML(res.Body())
 	if err != nil {
 		log.Error().Str("postID", postID).Err(err).Msg("Failed to parse data from ParseEmbedHTML")
 		return nil, err
@@ -248,7 +248,7 @@ func gqTextNewLine(s *goquery.Selection) string {
 	return sb.String()
 }
 
-func ParseEmbedHTML(embedHTML []byte) ([]byte, error) {
+func parseEmbedHTML(embedHTML []byte) ([]byte, error) {
 	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(embedHTML))
 	if err != nil {
 		return nil, err
