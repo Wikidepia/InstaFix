@@ -150,7 +150,7 @@ func getData(postID string, p *fastjson.Parser) (*fastjson.Value, error) {
 	}
 
 	// Check if contains "ebmMessage" (error message)
-	if bytes.Contains(res.Body(), utils.S2B("ebmMessage")) {
+	if bytes.Contains(res.Body(), []byte("ebmMessage")) {
 		return nil, ErrNotFound
 	}
 
@@ -159,7 +159,7 @@ func getData(postID string, p *fastjson.Parser) (*fastjson.Value, error) {
 
 	// TimeSliceImpl
 	ldeMatch := false
-	for _, line := range bytes.Split(res.Body(), utils.S2B("\n")) {
+	for _, line := range bytes.Split(res.Body(), []byte("\n")) {
 		// Check if line contains TimeSliceImpl
 		ldeMatch, _ = l.Extract(line)
 	}
@@ -171,7 +171,7 @@ func getData(postID string, p *fastjson.Parser) (*fastjson.Value, error) {
 			if tt == js.ErrorToken {
 				break
 			}
-			if tt == js.StringToken && bytes.Contains(text, utils.S2B("shortcode_media")) {
+			if tt == js.StringToken && bytes.Contains(text, []byte("shortcode_media")) {
 				// Strip quotes from start and end
 				text = text[1 : len(text)-1]
 				unescapeData := utils.UnescapeJSONString(utils.B2S(text))
@@ -272,7 +272,7 @@ func ParseEmbedHTML(embedHTML []byte) ([]byte, error) {
 	caption := gqTextNewLine(doc.Find(".Caption"))
 
 	// Check if contains WatchOnInstagram
-	videoBlocked := strconv.FormatBool(bytes.Contains(embedHTML, utils.S2B("WatchOnInstagram")))
+	videoBlocked := strconv.FormatBool(bytes.Contains(embedHTML, []byte("WatchOnInstagram")))
 
 	// Totally safe 100% valid JSON 👍
 	return utils.S2B(`{
