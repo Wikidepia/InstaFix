@@ -313,5 +313,9 @@ func parseGQLData(postID string) ([]byte, error) {
 	if err := client.Do(req, res); err != nil {
 		return nil, err
 	}
-	return res.Body(), nil
+
+	// Copy body to new buffer
+	body := make([]byte, len(res.Body()))
+	copy(body, res.Body())
+	return body, nil
 }
