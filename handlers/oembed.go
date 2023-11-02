@@ -26,7 +26,6 @@ func OEmbed() fiber.Handler {
 		}
 
 		views.OEmbed(OEmbedData, viewsBuf)
-		c.Response().SetBodyRaw(viewsBuf.Bytes())
-		return nil
+		return c.Send(viewsBuf.Bytes())
 	}
 }

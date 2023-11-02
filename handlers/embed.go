@@ -39,15 +39,13 @@ func Embed() fiber.Handler {
 		if err != nil {
 			viewsData.Description = "Invalid media number"
 			views.Embed(viewsData, viewsBuf)
-			c.Response().SetBodyRaw(viewsBuf.Bytes())
-			return nil
+			return c.Send(viewsBuf.Bytes())
 		}
 		direct, err := strconv.ParseBool(c.Query("direct", "false"))
 		if err != nil {
 			viewsData.Description = "Invalid direct parameter"
 			views.Embed(viewsData, viewsBuf)
-			c.Response().SetBodyRaw(viewsBuf.Bytes())
-			return nil
+			return c.Send(viewsBuf.Bytes())
 		}
 
 		// Stories use mediaID (int) instead of postID
@@ -75,20 +73,17 @@ func Embed() fiber.Handler {
 		if err != nil {
 			viewsData.Description = "Post might not be available"
 			views.Embed(viewsData, viewsBuf)
-			c.Response().SetBodyRaw(viewsBuf.Bytes())
-			return nil
+			return c.Send(viewsBuf.Bytes())
 		}
 
 		if mediaNum > len(item.Medias) {
 			viewsData.Description = "Media number out of range"
 			views.Embed(viewsData, viewsBuf)
-			c.Response().SetBodyRaw(viewsBuf.Bytes())
-			return nil
+			return c.Send(viewsBuf.Bytes())
 		} else if len(item.Username) == 0 {
 			viewsData.Description = "Post not found"
 			views.Embed(viewsData, viewsBuf)
-			c.Response().SetBodyRaw(viewsBuf.Bytes())
-			return nil
+			return c.Send(viewsBuf.Bytes())
 		}
 
 		var sb strings.Builder
@@ -127,7 +122,6 @@ func Embed() fiber.Handler {
 		}
 
 		views.Embed(viewsData, viewsBuf)
-		c.Response().SetBodyRaw(viewsBuf.Bytes())
-		return nil
+		return c.Send(viewsBuf.Bytes())
 	}
 }

@@ -42,8 +42,7 @@ func main() {
 		defer bytebufferpool.Put(viewsBuf)
 		c.Set("Content-Type", "text/html; charset=utf-8")
 		views.Home(viewsBuf)
-		c.Response().SetBodyRaw(viewsBuf.Bytes())
-		return nil
+		return c.Send(viewsBuf.Bytes())
 	})
 
 	// GET /p/Cw8X2wXPjiM
