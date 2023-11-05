@@ -41,6 +41,16 @@ func Embed() fiber.Handler {
 			views.Embed(viewsData, viewsBuf)
 			return c.Send(viewsBuf.Bytes())
 		}
+		imgIndex := c.Query("img_index")
+		if imgIndex != "" {
+			mediaNum, err = strconv.Atoi(imgIndex)
+			if err != nil {
+				viewsData.Description = "Invalid img_index parameter"
+				views.Embed(viewsData, viewsBuf)
+				return c.Send(viewsBuf.Bytes())
+			}
+		}
+
 		direct, err := strconv.ParseBool(c.Query("direct", "false"))
 		if err != nil {
 			viewsData.Description = "Invalid direct parameter"
