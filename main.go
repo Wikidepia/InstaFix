@@ -4,17 +4,30 @@ import (
 	"instafix/handlers"
 	data "instafix/handlers/data"
 	"instafix/views"
+	"os"
+	"path/filepath"
+	"time"
 
 	"github.com/ansrivas/fiberprometheus/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/pprof"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/valyala/bytebufferpool"
 )
 
 func init() {
 	data.InitDB()
+
+	// Run evictStatic every 5 minutes
+	go func() {
+		for {
+			evictStatic(25 * 1024 * 1024 * 1024) // 25 GB
+			// Sleep for 5 minutes
+			time.Sleep(time.Minute * 5)
+		}
+	}()
 }
 
 func main() {
@@ -59,4 +72,21 @@ func main() {
 	app.Get("/oembed", handlers.OEmbed())
 
 	app.Listen("127.0.0.1:3000")
+}
+
+// Remove file in static folder until below threshold
+func evictStatic(threshold int64) {
+	var dirSize int64 = 0
+	readSize := func(path string, file os.FileInfo, err error) error {
+		if !file.IsDir() {
+			if dirSize > threshold {
+				err := os.Remove(path)
+				log.Info().Str("path", path).Msg("Evicted from grid cache")
+				return err
+			}
+			dirSize += file.Size()
+		}
+		return nil
+	}
+	filepath.Walk("static", readSize)
 }
