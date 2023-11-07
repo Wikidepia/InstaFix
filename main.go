@@ -13,7 +13,6 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/pprof"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"github.com/valyala/bytebufferpool"
 )
 
@@ -77,16 +76,20 @@ func main() {
 // Remove file in static folder until below threshold
 func evictStatic(threshold int64) {
 	var dirSize int64 = 0
+	toRemove := []string{}
 	readSize := func(path string, file os.FileInfo, err error) error {
 		if !file.IsDir() {
 			if dirSize > threshold {
-				err := os.Remove(path)
-				log.Info().Str("path", path).Msg("Evicted from grid cache")
-				return err
+				toRemove = append(toRemove, path)
+				return nil
 			}
 			dirSize += file.Size()
 		}
 		return nil
 	}
 	filepath.Walk("static", readSize)
+
+	for _, path := range toRemove {
+		os.Remove(path)
+	}
 }
