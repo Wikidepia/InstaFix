@@ -76,20 +76,18 @@ func main() {
 // Remove file in static folder until below threshold
 func evictStatic(threshold int64) {
 	var dirSize int64 = 0
-	toRemove := []string{}
 	readSize := func(path string, file os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 		if !file.IsDir() {
 			if dirSize > threshold {
-				toRemove = append(toRemove, path)
-				return nil
+				err := os.Remove(path)
+				return err
 			}
 			dirSize += file.Size()
 		}
 		return nil
 	}
 	filepath.Walk("static", readSize)
-
-	for _, path := range toRemove {
-		os.Remove(path)
-	}
 }
