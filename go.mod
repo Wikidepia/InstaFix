@@ -6,12 +6,12 @@ require (
 	github.com/PuerkitoBio/goquery v1.8.1
 	github.com/PurpleSec/escape v1.0.0
 	github.com/ansrivas/fiberprometheus/v2 v2.6.1
-	github.com/cockroachdb/pebble v0.0.0-20231027194153-ed45a7767175
+	github.com/cockroachdb/pebble v0.0.0-20231107205124-81d9a4fea01c
 	github.com/gofiber/fiber/v2 v2.50.0
 	github.com/kelindar/binary v1.0.18
 	github.com/ozankasikci/go-image-merge v0.2.3-0.20220620190453-66fdff081378
 	github.com/rs/zerolog v1.31.0
-	github.com/tdewolff/parse/v2 v2.7.0
+	github.com/tdewolff/parse/v2 v2.7.4
 	github.com/valyala/bytebufferpool v1.0.0
 	github.com/valyala/fasthttp v1.50.0
 	github.com/valyala/fastjson v1.6.4
@@ -23,7 +23,7 @@ require (
 	github.com/DataDog/zstd v1.5.5 // indirect
 	github.com/andybalholm/brotli v1.0.6 // indirect
 	github.com/andybalholm/cascadia v1.3.2 // indirect
-	github.com/benbjohnson/clock v1.3.0 // indirect
+	github.com/benbjohnson/clock v1.3.5 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cockroachdb/errors v1.11.1 // indirect
@@ -52,7 +52,7 @@ require (
 	github.com/stretchr/testify v1.8.4 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
-	golang.org/x/sys v0.13.0 // indirect
-	golang.org/x/text v0.13.0 // indirect
+	golang.org/x/sys v0.14.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 )
