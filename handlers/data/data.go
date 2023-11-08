@@ -21,7 +21,12 @@ import (
 	"golang.org/x/net/html"
 )
 
-var client = &fasthttp.Client{Dial: fasthttpproxy.FasthttpProxyHTTPDialer(), ReadBufferSize: 16 * 1024}
+var client = &fasthttp.Client{
+	Dial:               fasthttpproxy.FasthttpProxyHTTPDialer(),
+	ReadBufferSize:     16 * 1024,
+	MaxConnsPerHost:    1024,
+	MaxConnWaitTimeout: 5 * time.Second,
+}
 var timeout = 10 * time.Second
 var parserPool fastjson.ParserPool
 
