@@ -80,7 +80,7 @@ func Embed() fiber.Handler {
 		// Get data
 		item := data.InstaData{}
 		err = item.GetData(postID)
-		if err != nil {
+		if err != nil || len(item.Medias) == 0 {
 			viewsData.Description = "Post might not be available"
 			views.Embed(viewsData, viewsBuf)
 			return c.Send(viewsBuf.Bytes())
