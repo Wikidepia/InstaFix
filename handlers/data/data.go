@@ -84,7 +84,10 @@ func (i *InstaData) GetData(postID string) error {
 
 	item := data.Get("shortcode_media")
 	if item == nil {
-		return errors.New("shortcode_media not found")
+		item = data.Get("xdt_shortcode_media")
+		if item == nil {
+			return errors.New("shortcode_media not found")
+		}
 	}
 
 	media := []*fastjson.Value{item}
