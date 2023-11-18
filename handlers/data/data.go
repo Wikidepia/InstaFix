@@ -309,8 +309,8 @@ func parseGQLData(postID string, req *fasthttp.Request, res *fasthttp.Response) 
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36")
 	req.Header.Set("Referer", "https://www.instagram.com/p/"+postID+"/")
 
-	req.SetRequestURI("https://www.instagram.com/graphql/query/")
-	req.URI().QueryArgs().Add("query_hash", "b3055c01b4b222b8a47dc12b090e4e64")
+	req.SetRequestURI("https://www.instagram.com/api/graphql")
+	req.URI().QueryArgs().Add("doc_id", "10015901848480474")
 	req.URI().QueryArgs().Add("variables", "{\"shortcode\":\""+postID+"\"}")
 
 	if err := client.Do(req, res); err != nil {
