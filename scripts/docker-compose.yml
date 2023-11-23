@@ -2,7 +2,7 @@ version: '3.7'
 
 services:
   instafix:
-    image: ghcr.io/Wikidepia/InstaFix:main
+    image: ghcr.io/wikidepia/instafix:main
     restart: unless-stopped
     expose:
       - "3000:3000" # Use HOST:3000 for direct access if Traefik is not setup

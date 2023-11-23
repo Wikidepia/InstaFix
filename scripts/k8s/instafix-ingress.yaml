@@ -1,0 +1,42 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: instafix
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`ddinstagram.com`)
+      kind: Rule
+      services:
+        - name: instafix
+          port: 3000
+  tls:
+    secretName: ddinstagram-com
+
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ddinstagram-com
+spec:
+  secretName: ddinstagram-com
+  commonName: ddinstagram.com
+  dnsNames:
+    - ddinstagram.com
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: instafix
+  labels:
+    app: instafix
+spec:
+  selector:
+    app: instafix
+  ports:
+    - port: 3000
