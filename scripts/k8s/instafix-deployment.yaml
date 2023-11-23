@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: instafix
+spec:
+  replicas: 10
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: instafix
+  
+  template:
+    metadata:
+      labels:
+        app: instafix
+    spec:
+      containers:
+        - image: ghcr.io/wikidepia/instafix:main
+          name: instafix
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+      restartPolicy: Always
