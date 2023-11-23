@@ -47,7 +47,7 @@ func main() {
 
 	// Initialize zerolog
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	zerolog.SetGlobalLevel(zerolog.WarnLevel)
 
 	app.Get("/", func(c *fiber.Ctx) error {
 		viewsBuf := bytebufferpool.Get()
