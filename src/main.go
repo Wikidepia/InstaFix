@@ -70,7 +70,7 @@ func main() {
 	app.Get("/grid/:postID", handlers.Grid())
 	app.Get("/oembed", handlers.OEmbed())
 
-	app.Listen("127.0.0.1:3000")
+	app.Listen("0.0.0.0:3000")
 }
 
 // Remove file in static folder until below threshold
