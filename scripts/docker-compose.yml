@@ -1,0 +1,14 @@
+version: '3.7'
+
+services:
+  instafix:
+    image: ghcr.io/Wikidepia/InstaFix:main
+    restart: unless-stopped
+    expose:
+      - "3000:3000" # Use HOST:3000 for direct access if Traefik is not setup
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.instafix.entryPoints=web-secure
+      - traefik.http.routers.instafix.rule=Host(`ddinstagram.com`)
+      - traefik.http.routers.instafix.tls=true
+      - traefik.http.services.instafix.loadbalancer.server.port=3000
