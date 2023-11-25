@@ -14,6 +14,8 @@ RUN go mod download
 COPY *.go ./
 COPY handlers/ ./handlers/
 COPY handlers/data/ ./handlers/data/
+# NO-OP in case handlers/data/ was already copied previously
+RUN true
 COPY utils/ ./utils/
 COPY views/ ./views/
 
