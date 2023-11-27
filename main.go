@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"instafix/handlers"
 	data "instafix/handlers/data"
 	"instafix/views"
@@ -30,6 +31,9 @@ func init() {
 }
 
 func main() {
+	listenAddr := flag.String("listen", "0.0.0.0:3000", "Address to listen on")
+	flag.Parse()
+
 	app := fiber.New()
 
 	recoverConfig := recover.ConfigDefault
@@ -70,7 +74,7 @@ func main() {
 	app.Get("/grid/:postID", handlers.Grid())
 	app.Get("/oembed", handlers.OEmbed())
 
-	app.Listen("0.0.0.0:3000")
+	app.Listen(*listenAddr)
 }
 
 // Remove file in static folder until below threshold
