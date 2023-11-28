@@ -226,6 +226,8 @@ func getData(postID string, p *fastjson.Parser) (*fastjson.Value, error) {
 		return nil, ErrNotFound
 	}
 
+	// Need to re-parse as fastjson do weird stuff idk
+	embedHTMLData, _ = p.ParseBytes(embedHTML)
 	log.Info().Str("postID", postID).Msg("Data parsed from ParseEmbedHTML")
 	return embedHTMLData, nil
 }
