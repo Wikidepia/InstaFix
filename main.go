@@ -70,7 +70,7 @@ func main() {
 	prometheus.RegisterAt(app, "/metrics")
 	app.Use(prometheus.Middleware)
 
-	// Close buntdb when app closes
+	// Close database when app closes
 	defer data.DB.Close()
 
 	// Initialize zerolog
