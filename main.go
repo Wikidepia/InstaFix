@@ -48,6 +48,9 @@ func byteSizeStrToInt(n string) (int64, error) {
 
 func init() {
 	data.InitDB()
+
+	// Create static folder if not exists
+	os.Mkdir("static", 0755)
 }
 
 func main() {
