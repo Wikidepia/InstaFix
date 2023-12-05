@@ -31,6 +31,7 @@ var knownBots = [][]byte{
 	[]byte("node"),
 	[]byte("mastodon"),
 	[]byte("http.rb"),
+	[]byte("discord"),
 }
 
 func IsBot(userAgent []byte) bool {
