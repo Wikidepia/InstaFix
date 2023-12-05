@@ -101,6 +101,9 @@ func Embed() fiber.Handler {
 
 		viewsData.Title = "@" + utils.B2S(item.Username)
 		viewsData.Description = utils.B2S(item.Caption)
+		if len(viewsData.Description) > 255 {
+			viewsData.Description = viewsData.Description[:250] + "..."
+		}
 
 		typename := item.Medias[max(1, mediaNum)-1].TypeName
 		isImage := bytes.Contains(typename, []byte("Image")) || bytes.Contains(typename, []byte("StoryVideo"))
