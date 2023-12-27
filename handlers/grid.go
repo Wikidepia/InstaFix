@@ -56,9 +56,20 @@ func Grid() fiber.Handler {
 		// Rate limit generation to 1 per second
 		rl.Take()
 
-		var images []*gim.Grid
+		// Filter media, only the first 4 image
+		mediaList := make([]data.Media, 0, 4)
+		for i, media := range item.Medias {
+			if !bytes.Contains(media.TypeName, []byte("Image")) {
+				continue
+			}
+			if len(mediaList) == cap(mediaList) {
+				break
+			}
+			mediaList = append(mediaList, item.Medias[i])
+		}
+
+		images := make([]string, len(mediaList))
 		var wg sync.WaitGroup
-		var mutex sync.Mutex
 
 		dirname, err := os.MkdirTemp("static", postID+"*")
 		if err != nil {
@@ -66,13 +77,8 @@ func Grid() fiber.Handler {
 		}
 		defer os.RemoveAll(dirname)
 
-		mediaList := item.Medias[:min(4, len(item.Medias))]
 		client := http.Client{Transport: transport, Timeout: timeout}
 		for i, media := range mediaList {
-			// Skip if not image
-			if !bytes.Contains(media.TypeName, []byte("Image")) {
-				continue
-			}
 			wg.Add(1)
 
 			go func(i int, media data.Media) {
@@ -87,6 +93,7 @@ func Grid() fiber.Handler {
 				if err != nil {
 					return
 				}
+				defer res.Body.Close()
 
 				fname := filepath.Join(dirname, strconv.Itoa(i)+".jpg")
 				file, err := os.Create(fname)
@@ -94,31 +101,38 @@ func Grid() fiber.Handler {
 					return
 				}
 
-				defer res.Body.Close()
 				_, err = io.Copy(file, res.Body)
 				if err != nil {
 					return
 				}
 
-				// Append image
-				mutex.Lock()
-				defer mutex.Unlock()
-				images = append(images, &gim.Grid{ImageFilePath: fname})
+				images[i] = fname
 			}(i, media)
 		}
 		wg.Wait()
 
-		if len(images) == 0 {
+		// Create grid Images
+		var gridIm []*gim.Grid
+		for _, image := range images {
+			if image == "" {
+				continue
+			}
+			gridIm = append(gridIm, &gim.Grid{
+				ImageFilePath: image,
+			})
+		}
+
+		if len(gridIm) == 0 {
 			return c.SendStatus(fiber.StatusNotFound)
-		} else if len(images) == 1 {
+		} else if len(gridIm) == 1 {
 			return c.Redirect("/images/" + postID + "/1")
 		}
 
 		countY := 1
-		if len(images) > 2 {
+		if len(gridIm) > 2 {
 			countY = 2
 		}
-		grid, err := gim.New(images, 2, countY).Merge()
+		grid, err := gim.New(gridIm, 2, countY).Merge()
 		if err != nil {
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
