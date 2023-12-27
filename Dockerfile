@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.21
+FROM golang:alpine as app-builder
 
 # Set destination for COPY
 WORKDIR /app
@@ -20,7 +20,15 @@ COPY utils/ ./utils/
 COPY views/ ./views/
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux go build
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags '-extldflags "-static"'
+
+# Run in scratch container
+FROM scratch
+# the test program:
+COPY --from=app-builder /app/instafix /instafix
+# the tls certificates:
+# NB: this pulls directly from the upstream image, which already has ca-certificates:
+COPY --from=alpine:latest /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 # Optional:
 # To bind to a TCP port, runtime parameters must be supplied to the docker command.
@@ -29,5 +37,5 @@ RUN CGO_ENABLED=0 GOOS=linux go build
 # https://docs.docker.com/engine/reference/builder/#expose
 EXPOSE 3000
 
-# Run
-ENTRYPOINT ["/app/instafix"]
+# Run the app
+ENTRYPOINT ["/instafix"]
