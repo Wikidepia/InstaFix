@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"bytes"
-	"image/jpeg"
 	data "instafix/handlers/data"
 	"instafix/utils"
 	"io"
@@ -14,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"git.sr.ht/~jackmordaunt/go-libwebp/webp"
 	"github.com/gofiber/fiber/v2"
 	gim "github.com/ozankasikci/go-image-merge"
 	"go.uber.org/ratelimit"
@@ -34,7 +34,7 @@ var rl = ratelimit.New(1)
 func Grid() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		postID := c.Params("postID")
-		gridFname := filepath.Join("static", postID+".jpeg")
+		gridFname := filepath.Join("static", postID+".webp")
 
 		// If already exists, return
 		if _, err := os.Stat(gridFname); err == nil {
@@ -129,8 +129,7 @@ func Grid() fiber.Handler {
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
 		defer f.Close()
-		jpeg.Encode(f, grid, &jpeg.Options{Quality: 75})
-
+		webp.Encode(f, grid, webp.Quality(0.75))
 		return c.SendFile(gridFname)
 	}
 }
