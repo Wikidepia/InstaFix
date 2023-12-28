@@ -16,7 +16,6 @@ import (
 	"git.sr.ht/~jackmordaunt/go-libwebp/webp"
 	"github.com/gofiber/fiber/v2"
 	gim "github.com/ozankasikci/go-image-merge"
-	"go.uber.org/ratelimit"
 )
 
 var transport = &http.Transport{
@@ -29,7 +28,6 @@ var transport = &http.Transport{
 	DisableKeepAlives:     true,
 }
 var timeout = 10 * time.Second
-var rl = ratelimit.New(1)
 
 func Grid() fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -52,9 +50,6 @@ func Grid() fiber.Handler {
 		if len(item.Medias) == 1 {
 			return c.Redirect("/images/" + postID + "/1")
 		}
-
-		// Rate limit generation to 1 per second
-		rl.Take()
 
 		// Filter media, only the first 4 image
 		mediaList := make([]data.Media, 0, 4)
