@@ -11,6 +11,7 @@ import (
 	data "instafix/handlers/data"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/rs/zerolog/log"
 	"github.com/valyala/bytebufferpool"
 )
 
@@ -91,6 +92,7 @@ func Embed() fiber.Handler {
 			views.Embed(viewsData, viewsBuf)
 			return c.Send(viewsBuf.Bytes())
 		} else if len(item.Username) == 0 {
+			log.Warn().Str("postID", postID).Msg("Post not found")
 			viewsData.Description = "Post not found"
 			views.Embed(viewsData, viewsBuf)
 			return c.Send(viewsBuf.Bytes())
