@@ -62,4 +62,4 @@ require (
 	modernc.org/memory v1.7.2 // indirect
 )
 
-replace git.sr.ht/~jackmordaunt/go-libwebp => github.com/Wikidepia/go-libwebp-fork v0.0.0-20240125020615-9ba7207dd6c5
+replace git.sr.ht/~jackmordaunt/go-libwebp => github.com/wikidepia/go-libwebp-fork v0.0.0-20240125020615-9ba7207dd6c5
