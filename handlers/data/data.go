@@ -152,7 +152,7 @@ func getData(postID string, p *fastjson.Parser) (*fastjson.Value, error) {
 	var err error
 	for retries := 0; retries < 3; retries++ {
 		err := client.DoTimeout(req, res, timeout)
-		if err == nil {
+		if err == nil && len(res.Body()) > 0 {
 			break
 		}
 	}
