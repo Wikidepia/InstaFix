@@ -92,7 +92,7 @@ func Embed() fiber.Handler {
 			views.Embed(viewsData, viewsBuf)
 			return c.Send(viewsBuf.Bytes())
 		} else if len(item.Username) == 0 {
-			log.Warn().Str("postID", postID).Msg("Post not found")
+			log.Warn().Str("postID", postID).Msg("Post not found; empty username")
 			viewsData.Description = "Post not found"
 			views.Embed(viewsData, viewsBuf)
 			return c.Send(viewsBuf.Bytes())

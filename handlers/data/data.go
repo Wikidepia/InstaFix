@@ -75,7 +75,7 @@ func (i *InstaData) GetData(postID string) error {
 		if err != ErrNotFound {
 			log.Error().Str("postID", postID).Err(err).Msg("Failed to get data from Instagram")
 		} else {
-			log.Warn().Str("postID", postID).Err(err).Msg("Post not found")
+			log.Warn().Str("postID", postID).Err(err).Msg("Post not found; err getData")
 		}
 		return err
 	}
