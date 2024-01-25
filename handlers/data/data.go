@@ -317,7 +317,7 @@ func parseGQLData(postID string, req *fasthttp.Request, res *fasthttp.Response) 
 	req.URI().QueryArgs().Add("query_hash", "b3055c01b4b222b8a47dc12b090e4e64")
 	req.URI().QueryArgs().Add("variables", "{\"shortcode\":\""+postID+"\"}")
 
-	if err := client.Do(req, res); err != nil {
+	if err := client.DoTimeout(req, res, timeout); err != nil {
 		return nil, err
 	}
 	return res.Body(), nil
