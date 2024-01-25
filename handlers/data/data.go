@@ -221,8 +221,8 @@ func getData(postID string, p *fastjson.Parser) (*fastjson.Value, error) {
 		}
 	}
 
-	// Check if contains "ebmMessage" (error message)
-	if bytes.Contains(res.Body(), []byte("ebmMessage")) {
+	// Failed to scrape from Embed
+	if len(username) == 0 {
 		return nil, ErrNotFound
 	}
 
