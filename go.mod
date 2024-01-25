@@ -61,3 +61,5 @@ require (
 	modernc.org/mathutil v1.6.0 // indirect
 	modernc.org/memory v1.7.2 // indirect
 )
+
+replace git.sr.ht/~jackmordaunt/go-libwebp => github.com/Wikidepia/go-libwebp-fork v0.0.0-20240124235250-8bf781783c24
