@@ -4,6 +4,8 @@
 
 InstaFix serves fixed Instagram image and video embeds. Heavily inspired by [fxtwitter.com](https://fxtwitter.com).
 
+#### Official site found here [InstaFix](https://www.ddinstagram.com/)
+
 ## How to use
 
 Add `dd` before `instagram.com` to show Instagram embeds.
