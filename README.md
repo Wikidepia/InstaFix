@@ -4,8 +4,6 @@
 
 InstaFix serves fixed Instagram image and video embeds. Heavily inspired by [fxtwitter.com](https://fxtwitter.com).
 
-#### Official site found here [InstaFix](https://www.ddinstagram.com/)
-
 ## How to use
 
 Add `dd` before `instagram.com` to show Instagram embeds.
@@ -26,7 +24,7 @@ Add `dd` before `instagram.com` to show Instagram embeds.
 3. Optional: Use the Docker Compose file in [./scripts/docker-compose.yml](./scripts/docker-compose.yml).
 4. Optional: Use a [Kubernetes Deployment file](./scripts/k8s/instafix-deployment.yaml) and a [Kubernetes Ingress configuration file](./scripts/k8s/instafix-ingress.yaml) to deploy to a Kubernetes cluster (with 10 replicas) by issuing `kubectl apply -f .` over the `./scripts/k8s/` folder. [TODO: CockroachDB is not shared between replicas at application level, extract Cockroach into its own Service and allow replicas to communicate to it].
 
-## Using iOS shortcut 
+## Using iOS shortcut (contributed by @JohnMcAnearney)
 You can use the iOS shortcut found here: [Embed in Discord](https://www.icloud.com/shortcuts/3412a4c344fd4c6f99924e525dd3c0a2), in order to quickly embed content using InstaFix. The shortcut works by grabbing the url of the Instagram content you're trying to share, automatically appends 'dd' to where it needs to be, copies this to your device's clipboard and opens Discord. 
 
 Note: Once you've downloaded the shortcut, you will need to: 
