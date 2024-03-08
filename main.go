@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/binary"
 	"flag"
 	"instafix/handlers"
 	data "instafix/handlers/data"
@@ -12,6 +14,7 @@ import (
 	"time"
 
 	"github.com/ansrivas/fiberprometheus/v2"
+	"github.com/cockroachdb/pebble"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/pprof"
 	"github.com/gofiber/fiber/v2/middleware/recover"
@@ -83,11 +86,12 @@ func main() {
 		log.Fatal().Err(err).Msg("Failed to parse grid-cache-size")
 	}
 
-	// Evict static files when above threshold
+	// Evict cache every minute
 	go func() {
 		for {
 			evictStatic(gridCacheSizeParsed)
-			time.Sleep(5 * time.Minute) // 5 min delay
+			evictCache()
+			time.Sleep(time.Minute)
 		}
 	}()
 
@@ -135,4 +139,27 @@ func evictStatic(threshold int64) {
 		return nil
 	}
 	filepath.Walk("static", readSize)
+}
+
+// Remove cache from Pebble if already expired
+func evictCache() {
+	iter, err := data.DB.NewIter(&pebble.IterOptions{LowerBound: []byte("exp-")})
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create iterator")
+		return
+	}
+	defer iter.Close()
+
+	batch := data.DB.NewBatch()
+	curTime := uint64(time.Now().UnixNano())
+	for iter.First(); iter.Valid(); iter.Next() {
+		timestamp := bytes.Trim(iter.Key(), "exp-")
+		if binary.LittleEndian.Uint64(timestamp) < curTime {
+			batch.Delete(iter.Key(), pebble.NoSync)
+			batch.Delete(iter.Value(), pebble.NoSync)
+		}
+	}
+	if err := batch.Commit(pebble.NoSync); err != nil {
+		log.Error().Err(err).Msg("Failed to commit batch")
+	}
 }

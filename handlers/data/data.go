@@ -44,7 +44,6 @@ type InstaData struct {
 	Username []byte
 	Caption  []byte
 	Medias   []Media
-	Expire   uint32
 }
 
 func (i *InstaData) GetData(postID string) error {
@@ -60,11 +59,8 @@ func (i *InstaData) GetData(postID string) error {
 		if err != nil {
 			return err
 		}
-		// Check if expired, if not return data from cache
-		if i.Expire > uint32(time.Now().Unix()) {
-			log.Info().Str("postID", postID).Msg("Data parsed from cache")
-			return nil
-		}
+		log.Info().Str("postID", postID).Msg("Data parsed from cache")
+		return nil
 	}
 
 	// Get data from Instagram
@@ -118,17 +114,30 @@ func (i *InstaData) GetData(postID string) error {
 		})
 	}
 
-	// Set expire
-	i.Expire = uint32(time.Now().Add(24 * time.Hour).Unix())
-
 	bb, err := binary.Marshal(i)
 	if err != nil {
 		log.Error().Str("postID", postID).Err(err).Msg("Failed to marshal data")
 		return err
 	}
 
-	if err := DB.Set(utils.S2B(postID), bb, pebble.Sync); err != nil {
+	batch := DB.NewBatch()
+	// Write cache to DB
+	if err := batch.Set(utils.S2B(postID), bb, pebble.Sync); err != nil {
 		log.Error().Str("postID", postID).Err(err).Msg("Failed to save data to cache")
+		return err
+	}
+
+	// Write expire to DB
+	expire := make([]byte, 8)
+	binary.LittleEndian.PutUint64(expire, uint64(time.Now().Add(24*time.Hour).UnixNano()))
+	if err := batch.Set(append([]byte("exp-"), expire...), utils.S2B(postID), pebble.Sync); err != nil {
+		log.Error().Str("postID", postID).Err(err).Msg("Failed to save data to cache")
+		return err
+	}
+
+	// Commit batch
+	if err := batch.Commit(pebble.Sync); err != nil {
+		log.Error().Str("postID", postID).Err(err).Msg("Failed to commit batch")
 		return err
 	}
 	return nil
