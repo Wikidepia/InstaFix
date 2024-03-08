@@ -1,3 +1,5 @@
+git.sr.ht/~jackmordaunt/go-libwebp v1.4.0 h1:ZEmiZFxcjYGbSftruNG8VnzoL3kG2xAogtNpZqHipFg=
+git.sr.ht/~jackmordaunt/go-libwebp v1.4.0/go.mod h1:8557wZRj8KWRPBM+osAuAXVVR5nVURZ3SCG5rnACBdE=
 github.com/DataDog/zstd v1.5.5 h1:oWf5W7GtOLgp6bciQYDmhHHjdhYkALu6S/5Ni9ZgSvQ=
 github.com/DataDog/zstd v1.5.5/go.mod h1:g4AWEaM3yOg3HYfnJ3YIawPnVdXJh9QME85blwSAmyw=
 github.com/PuerkitoBio/goquery v1.9.1 h1:mTL6XjbJTZdpfL+Gwl5U2h1l9yEkJjhmlTeV9VPW7UI=
@@ -115,8 +117,6 @@ github.com/valyala/fastjson v1.6.4 h1:uAUNq9Z6ymTgGhcm0UynUAB6tlbakBrz6CQFax3BXV
 github.com/valyala/fastjson v1.6.4/go.mod h1:CLCAqky6SMuOcxStkYQvblddUtoRxhYMGLrsQns1aXY=
 github.com/valyala/tcplisten v1.0.0 h1:rBHj/Xf+E1tRGZyWIWwJDiRY0zc1Js+CV5DqwacVSA8=
 github.com/valyala/tcplisten v1.0.0/go.mod h1:T0xQ8SeCZGxckz9qRXTfG43PvQ/mcWh7FwZEA7Ioqkc=
-github.com/wikidepia/go-libwebp-fork v0.0.0-20240125020615-9ba7207dd6c5 h1:tNMa3BT0am2u6hzs6+R214+0+6GiSQ0tV51J11NSxm0=
-github.com/wikidepia/go-libwebp-fork v0.0.0-20240125020615-9ba7207dd6c5/go.mod h1:8557wZRj8KWRPBM+osAuAXVVR5nVURZ3SCG5rnACBdE=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
