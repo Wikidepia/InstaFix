@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"instafix/utils"
-	"math/rand"
 	"strconv"
 	"strings"
 	"time"
@@ -129,10 +128,8 @@ func (i *InstaData) GetData(postID string) error {
 	}
 
 	// Write expire to DB
-	expire := make([]byte, 8)
-	randNum := rand.Intn(9999-1000) + 1000
-	binary.LittleEndian.PutUint64(expire, uint64(time.Now().Add(24*time.Hour).UnixNano()+int64(randNum)))
-	if err := batch.Set(append([]byte("exp-"), expire...), utils.S2B(postID), pebble.Sync); err != nil {
+	expTime := strconv.FormatInt(time.Now().Add(24*time.Hour).UnixNano(), 10)
+	if err := batch.Set(append([]byte("exp-"), expTime...), utils.S2B(postID), pebble.Sync); err != nil {
 		log.Error().Str("postID", postID).Err(err).Msg("Failed to save data to cache")
 		return err
 	}

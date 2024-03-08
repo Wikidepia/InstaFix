@@ -2,10 +2,10 @@ package main
 
 import (
 	"bytes"
-	"encoding/binary"
 	"flag"
 	"instafix/handlers"
 	data "instafix/handlers/data"
+	"instafix/utils"
 	"instafix/views"
 	"os"
 	"path/filepath"
@@ -151,21 +151,18 @@ func evictCache() {
 	defer iter.Close()
 
 	batch := data.DB.NewBatch()
-	curTime := uint64(time.Now().UnixNano())
+	curTime := time.Now().UnixNano()
 	for iter.First(); iter.Valid(); iter.Next() {
 		expireTimestamp := bytes.Trim(iter.Key(), "exp-")
-
-		var timestamp uint64
-		err := binary.Read(bytes.NewBuffer(expireTimestamp[:]), binary.LittleEndian, &timestamp)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to read expire timestamp")
-			continue
+		if n, err := strconv.ParseInt(utils.B2S(expireTimestamp), 10, 64); err == nil {
+			if n < curTime {
+				batch.Delete(iter.Key(), pebble.NoSync)
+				batch.Delete(iter.Value(), pebble.NoSync)
+			}
+		} else {
+			log.Error().Err(err).Msg("Failed to parse expire timestamp")
 		}
 
-		if timestamp < curTime {
-			batch.Delete(iter.Key(), pebble.NoSync)
-			batch.Delete(iter.Value(), pebble.NoSync)
-		}
 	}
 	if err := batch.Commit(pebble.NoSync); err != nil {
 		log.Error().Err(err).Msg("Failed to commit batch")
