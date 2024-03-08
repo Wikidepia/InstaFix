@@ -78,7 +78,7 @@ func main() {
 
 	// Initialize zerolog
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	zerolog.SetGlobalLevel(zerolog.WarnLevel)
+	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 
 	// Parse grid-cache-size
 	gridCacheSizeParsed, err := byteSizeStrToInt(*gridCacheSize)
@@ -153,8 +153,16 @@ func evictCache() {
 	batch := data.DB.NewBatch()
 	curTime := uint64(time.Now().UnixNano())
 	for iter.First(); iter.Valid(); iter.Next() {
-		timestamp := bytes.Trim(iter.Key(), "exp-")
-		if binary.LittleEndian.Uint64(timestamp) < curTime {
+		expireTimestamp := bytes.Trim(iter.Key(), "exp-")
+
+		var timestamp uint64
+		err := binary.Read(bytes.NewBuffer(expireTimestamp[:]), binary.LittleEndian, &timestamp)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to read expire timestamp")
+			continue
+		}
+
+		if timestamp < curTime {
 			batch.Delete(iter.Key(), pebble.NoSync)
 			batch.Delete(iter.Value(), pebble.NoSync)
 		}
