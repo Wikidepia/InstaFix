@@ -153,6 +153,10 @@ func evictCache() {
 	batch := data.DB.NewBatch()
 	curTime := time.Now().UnixNano()
 	for iter.First(); iter.Valid(); iter.Next() {
+		if !bytes.HasPrefix(iter.Key(), []byte("exp-")) {
+			continue
+		}
+
 		expireTimestamp := bytes.Trim(iter.Key(), "exp-")
 		if n, err := strconv.ParseInt(utils.B2S(expireTimestamp), 10, 64); err == nil {
 			if n < curTime {
