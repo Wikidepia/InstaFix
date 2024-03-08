@@ -22,7 +22,7 @@ import (
 )
 
 var client = &fasthttp.Client{
-	Dial:               fasthttpproxy.FasthttpProxyHTTPDialer(),
+	Dial:               fasthttpproxy.FasthttpProxyHTTPDialerTimeout(5 * time.Second),
 	ReadBufferSize:     16 * 1024,
 	MaxConnsPerHost:    1024,
 	MaxConnWaitTimeout: 5 * time.Second,
