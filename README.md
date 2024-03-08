@@ -34,10 +34,10 @@ Note: Once you've downloaded the shortcut, you will need to:
 4. Now edit your sharesheet to make it even quicker to use! Simply open your share sheet by sharing something from Instagram, click "Edit Actions..." and click the "+" button on "Embed in Discord"
 
 <p float="left">
-<img src="resources/readmeImages/Step1_image.jpg" width="140">
-<img src="resources/readmeImages/Step2_image.jpg" width="140">
-<img src="resources/readmeImages/Step4_image_a.jpg" width="140">
-<img src="resources/readmeImages/Step4_image_b.jpg" width="140">
+<img src=".github/assets/Step1_image.jpg" width="140">
+<img src=".github/assets/Step2_image.jpg" width="140">
+<img src=".github/assets/Step4_image_a.jpg" width="140">
+<img src=".github/assets/Step4_image_b.jpg" width="140">
 </p>
 
 ## Report a bug
