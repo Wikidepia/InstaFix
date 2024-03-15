@@ -64,3 +64,5 @@ require (
 	modernc.org/mathutil v1.6.0 // indirect
 	modernc.org/memory v1.7.2 // indirect
 )
+
+replace github.com/valyala/fastjson => github.com/Wikidepia/fastjson v0.0.0-20240315133439-3b22997fa3ff
