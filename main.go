@@ -7,6 +7,7 @@ import (
 	data "instafix/handlers/data"
 	"instafix/utils"
 	"instafix/views"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -125,20 +126,24 @@ func main() {
 // Remove file in static folder until below threshold
 func evictStatic(threshold int64) {
 	var dirSize int64 = 0
-	readSize := func(path string, file os.FileInfo, err error) error {
+	readSize := func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if !file.IsDir() {
+		if !d.IsDir() {
 			if dirSize > threshold {
 				err := os.Remove(path)
 				return err
 			}
-			dirSize += file.Size()
+			info, err := d.Info()
+			if err != nil {
+				return err
+			}
+			dirSize += info.Size()
 		}
 		return nil
 	}
-	filepath.Walk("static", readSize)
+	filepath.WalkDir("static", readSize)
 }
 
 // Remove cache from Pebble if already expired
