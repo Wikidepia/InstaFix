@@ -6,7 +6,13 @@ InstaFix serves fixed Instagram image and video embeds. Heavily inspired by [fxt
 
 ## How to use
 
-Add `dd` before `instagram.com` to show Instagram embeds.
+- Add `dd` before `instagram.com` to show Instagram embeds, or
+
+### Embed Media Only
+
+Add `d.dd` before `instagram.com` to show only the media.
+
+![](.github/assets/media_only.jpg)
 
 ## Deploy InstaFix yourself (locally)
 
