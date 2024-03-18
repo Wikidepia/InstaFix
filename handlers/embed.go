@@ -5,6 +5,7 @@ import (
 	"instafix/utils"
 	"instafix/views"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -103,6 +104,11 @@ func Embed() fiber.Handler {
 
 		viewsData.Title = "@" + utils.B2S(item.Username)
 		viewsData.Description = utils.B2S(item.Caption)
+
+		// remove spacers and single tags from description before trunc
+		trimFiller, _ := regexp.Compile("^(?:\\.|-|#[[:word:]]+)\n")
+		viewsData.Description = trimFiller.ReplaceAllString(viewsData.Description, "")
+
 		if len(viewsData.Description) > 255 {
 			viewsData.Description = viewsData.Description[:250] + "..."
 		}
