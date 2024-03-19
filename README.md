@@ -14,6 +14,12 @@ Add `d.dd` before `instagram.com` to show only the media.
 
 <img src=".github/assets/media_only.jpg" height="256">
 
+### Gallery View
+
+Add `g.dd` before `instagram.com` to show only the author and the media, without any caption.
+
+<img src=".github/assets/no_caption.jpg" height="256">
+
 ## Deploy InstaFix yourself (locally)
 
 1. Clone the repository.
