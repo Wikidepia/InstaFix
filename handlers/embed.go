@@ -59,6 +59,13 @@ func Embed() fiber.Handler {
 			return c.Send(viewsBuf.Bytes())
 		}
 
+		isGallery, err := strconv.ParseBool(c.Query("gallery", "false"))
+		if err != nil {
+			viewsData.Description = "Invalid gallery parameter"
+			views.Embed(viewsData, viewsBuf)
+			return c.Send(viewsBuf.Bytes())
+		}
+
 		// Stories use mediaID (int) instead of postID
 		if strings.Contains(c.Path(), "/stories/") {
 			mediaID, err := strconv.Atoi(postID)
@@ -102,9 +109,12 @@ func Embed() fiber.Handler {
 		sb.Grow(32) // 32 bytes should be enough for most cases
 
 		viewsData.Title = "@" + utils.B2S(item.Username)
-		viewsData.Description = utils.B2S(item.Caption)
-		if len(viewsData.Description) > 255 {
-			viewsData.Description = viewsData.Description[:250] + "..."
+		// Gallery do not have any caption
+		if !isGallery {
+			viewsData.Description = utils.B2S(item.Caption)
+			if len(viewsData.Description) > 255 {
+				viewsData.Description = viewsData.Description[:250] + "..."
+			}
 		}
 
 		typename := item.Medias[max(1, mediaNum)-1].TypeName
