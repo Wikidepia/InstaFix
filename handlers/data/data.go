@@ -198,7 +198,7 @@ func getData(postID string) (gjson.Result, error) {
 		return gjsonNil, err
 	}
 
-	embedHTMLData := gjson.ParseBytes(embedHTML)
+	embedHTMLData := gjson.Parse(embedHTML)
 
 	smedia := embedHTMLData.Get("shortcode_media")
 	videoBlocked := smedia.Get("video_blocked").Bool()
@@ -252,10 +252,10 @@ func gqTextNewLine(s *goquery.Selection) string {
 	return sb.String()
 }
 
-func parseEmbedHTML(embedHTML []byte) ([]byte, error) {
+func parseEmbedHTML(embedHTML []byte) (string, error) {
 	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(embedHTML))
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	// Get media URL
@@ -285,7 +285,7 @@ func parseEmbedHTML(embedHTML []byte) ([]byte, error) {
 	videoBlocked := strconv.FormatBool(bytes.Contains(embedHTML, []byte("WatchOnInstagram")))
 
 	// Totally safe 100% valid JSON 👍
-	return utils.S2B(`{
+	return `{
 		"shortcode_media": {
 			"owner": {"username": "` + username + `"},
 			"node": {"__typename": "` + typename + `", "display_url": "` + mediaURL + `"},
@@ -293,7 +293,7 @@ func parseEmbedHTML(embedHTML []byte) ([]byte, error) {
 			"dimensions": {"height": null, "width": null},
 			"video_blocked": ` + videoBlocked + `
 		}
-	}`), nil
+	}`, nil
 }
 
 func parseGQLData(postID string, req *fasthttp.Request, res *fasthttp.Response) ([]byte, error) {
