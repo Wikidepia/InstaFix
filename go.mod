@@ -13,9 +13,9 @@ require (
 	github.com/ozankasikci/go-image-merge v0.2.3-0.20220620190453-66fdff081378
 	github.com/rs/zerolog v1.32.0
 	github.com/tdewolff/parse/v2 v2.7.12
+	github.com/tidwall/gjson v1.17.1
 	github.com/valyala/bytebufferpool v1.0.0
 	github.com/valyala/fasthttp v1.52.0
-	github.com/valyala/fastjson v1.6.4
 	go.uber.org/ratelimit v0.3.1
 	golang.org/x/net v0.22.0
 )
@@ -54,6 +54,8 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/stretchr/testify v1.8.4 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225 // indirect
 	golang.org/x/image v0.15.0 // indirect

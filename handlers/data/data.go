@@ -15,11 +15,13 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/tdewolff/parse/v2"
 	"github.com/tdewolff/parse/v2/js"
+	"github.com/tidwall/gjson"
 	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttp/fasthttpproxy"
-	"github.com/valyala/fastjson"
 	"golang.org/x/net/html"
 )
+
+var gjsonNil = gjson.Result{}
 
 var client = &fasthttp.Client{
 	Dial:               fasthttpproxy.FasthttpProxyHTTPDialerTimeout(5 * time.Second),
@@ -28,7 +30,6 @@ var client = &fasthttp.Client{
 	MaxConnWaitTimeout: 5 * time.Second,
 }
 var timeout = 10 * time.Second
-var parserPool fastjson.ParserPool
 
 var (
 	ErrNotFound = errors.New("post not found")
@@ -63,10 +64,7 @@ func (i *InstaData) GetData(postID string) error {
 		return nil
 	}
 
-	// Get data from Instagram
-	p := parserPool.Get()
-	defer parserPool.Put(p)
-	data, err := getData(postID, p)
+	data, err := getData(postID)
 	if err != nil {
 		if err != ErrNotFound {
 			log.Error().Str("postID", postID).Err(err).Msg("Failed to get data from Instagram")
@@ -76,41 +74,37 @@ func (i *InstaData) GetData(postID string) error {
 		return err
 	}
 
-	if data == (*fastjson.Value)(nil) {
-		return errors.New("data is nil")
-	}
-
 	item := data.Get("shortcode_media")
-	if item == nil {
+	if !item.Exists() {
 		return errors.New("shortcode_media not found")
 	}
 
-	media := []*fastjson.Value{item}
-	if item.Exists("edge_sidecar_to_children") {
-		media = item.GetArray("edge_sidecar_to_children", "edges")
+	media := []gjson.Result{item}
+	if item.Get("edge_sidecar_to_children").Exists() {
+		media = item.Get("edge_sidecar_to_children.edges").Array()
 	}
 
 	i.PostID = utils.S2B(postID)
 
 	// Get username
-	i.Username = item.GetStringBytes("owner", "username")
+	i.Username = []byte(item.Get("owner.username").String())
 
 	// Get caption
-	i.Caption = bytes.TrimSpace(item.GetStringBytes("edge_media_to_caption", "edges", "0", "node", "text"))
+	i.Caption = bytes.TrimSpace([]byte(item.Get("edge_media_to_caption.edges.0.node.text").String()))
 
 	// Get medias
 	i.Medias = make([]Media, 0, len(media))
 	for _, m := range media {
-		if m.Exists("node") {
+		if m.Get("node").Exists() {
 			m = m.Get("node")
 		}
-		mediaURL := m.GetStringBytes("video_url")
-		if mediaURL == nil {
-			mediaURL = m.GetStringBytes("display_url")
+		mediaURL := m.Get("video_url")
+		if !mediaURL.Exists() {
+			mediaURL = m.Get("display_url")
 		}
 		i.Medias = append(i.Medias, Media{
-			TypeName: m.GetStringBytes("__typename"),
-			URL:      mediaURL,
+			TypeName: []byte(m.Get("__typename").String()),
+			URL:      []byte(mediaURL.String()),
 		})
 	}
 
@@ -142,7 +136,7 @@ func (i *InstaData) GetData(postID string) error {
 	return nil
 }
 
-func getData(postID string, p *fastjson.Parser) (*fastjson.Value, error) {
+func getData(postID string) (gjson.Result, error) {
 	req, res := fasthttp.AcquireRequest(), fasthttp.AcquireResponse()
 	defer func() {
 		fasthttp.ReleaseRequest(req)
@@ -163,9 +157,6 @@ func getData(postID string, p *fastjson.Parser) (*fastjson.Value, error) {
 		if err == nil && len(res.Body()) > 0 {
 			break
 		}
-	}
-	if err != nil {
-		return nil, err
 	}
 
 	// Pattern matching using LDE
@@ -189,11 +180,11 @@ func getData(postID string, p *fastjson.Parser) (*fastjson.Value, error) {
 				// Strip quotes from start and end
 				text = text[1 : len(text)-1]
 				unescapeData := utils.UnescapeJSONString(utils.B2S(text))
-				timeSlice, err := p.Parse(unescapeData)
-				if err != nil {
+				if !gjson.Valid(unescapeData) {
 					log.Error().Str("postID", postID).Err(err).Msg("Failed to parse data from TimeSliceImpl")
-					return nil, err
+					return gjsonNil, err
 				}
+				timeSlice := gjson.Parse(unescapeData)
 				log.Info().Str("postID", postID).Msg("Data parsed from TimeSliceImpl")
 				return timeSlice.Get("gql_data"), nil
 			}
@@ -204,26 +195,24 @@ func getData(postID string, p *fastjson.Parser) (*fastjson.Value, error) {
 	embedHTML, err := parseEmbedHTML(res.Body())
 	if err != nil {
 		log.Error().Str("postID", postID).Err(err).Msg("Failed to parse data from ParseEmbedHTML")
-		return nil, err
-	}
-	embedHTMLData, err := p.ParseBytes(embedHTML)
-	if err != nil {
-		return nil, err
+		return gjsonNil, err
 	}
 
+	embedHTMLData := gjson.ParseBytes(embedHTML)
+
 	smedia := embedHTMLData.Get("shortcode_media")
-	videoBlocked := smedia.GetBool("video_blocked")
-	username := smedia.GetStringBytes("owner", "username")
+	videoBlocked := smedia.Get("video_blocked").Bool()
+	username := smedia.Get("owner.username").String()
 
 	// Scrape from GraphQL API
 	if videoBlocked || len(username) == 0 {
 		gqlValue, err := parseGQLData(postID, req, res)
 		if err != nil {
 			log.Error().Str("postID", postID).Err(err).Msg("Failed to parse data from parseGQLData")
-			return nil, err
+			return gjsonNil, err
 		}
-		gqlData, err := p.ParseBytes(gqlValue)
-		if err == nil && gqlData.Exists("data") {
+		gqlData := gjson.ParseBytes(gqlValue)
+		if gqlData.Get("data").Exists() {
 			log.Info().Str("postID", postID).Msg("Data parsed from parseGQLData")
 			return gqlData.Get("data"), nil
 		}
@@ -231,11 +220,9 @@ func getData(postID string, p *fastjson.Parser) (*fastjson.Value, error) {
 
 	// Failed to scrape from Embed
 	if len(username) == 0 {
-		return nil, ErrNotFound
+		return gjsonNil, ErrNotFound
 	}
 
-	// Need to re-parse as fastjson do weird stuff idk
-	embedHTMLData, _ = p.ParseBytes(embedHTML)
 	log.Info().Str("postID", postID).Msg("Data parsed from ParseEmbedHTML")
 	return embedHTMLData, nil
 }
