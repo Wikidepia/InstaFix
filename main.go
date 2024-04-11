@@ -92,7 +92,7 @@ func main() {
 		for {
 			evictStatic(gridCacheSizeParsed)
 			evictCache()
-			time.Sleep(time.Minute)
+			time.Sleep(5 * time.Minute)
 		}
 	}()
 
