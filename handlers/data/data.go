@@ -211,7 +211,7 @@ func getData(postID string) (gjson.Result, error) {
 			log.Error().Str("postID", postID).Err(err).Msg("Failed to parse data from parseGQLData")
 			return gjsonNil, err
 		}
-		gqlData := gjson.ParseBytes(gqlValue)
+		gqlData := gjson.Parse(utils.B2S(gqlValue))
 		if gqlData.Get("data").Exists() {
 			log.Info().Str("postID", postID).Msg("Data parsed from parseGQLData")
 			return gqlData.Get("data"), nil
