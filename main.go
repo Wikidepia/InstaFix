@@ -114,6 +114,7 @@ func main() {
 	app.Get("/p/:postID/:mediaNum", handlers.Embed())
 	app.Get("/:username/p/:postID/", handlers.Embed())
 	app.Get("/:username/p/:postID/:mediaNum", handlers.Embed())
+	app.Get("/:username/reel/:postID", handlers.Embed())
 
 	app.Get("/images/:postID/:mediaNum", handlers.Images())
 	app.Get("/videos/:postID/:mediaNum", handlers.Videos())
