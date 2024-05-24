@@ -113,7 +113,7 @@ func Embed() fiber.Handler {
 		if !isGallery {
 			viewsData.Description = utils.B2S(item.Caption)
 			if len(viewsData.Description) > 255 {
-				viewsData.Description = viewsData.Description[:250] + "..."
+				viewsData.Description = utils.Substr(viewsData.Description, 0, 250) + "..."
 			}
 		}
 
