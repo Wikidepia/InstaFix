@@ -19,6 +19,7 @@ import (
 	"github.com/tidwall/gjson"
 	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttp/fasthttpproxy"
+	"go.uber.org/ratelimit"
 	"golang.org/x/net/html"
 )
 
@@ -35,6 +36,8 @@ var timeout = 10 * time.Second
 var (
 	ErrNotFound = errors.New("post not found")
 )
+
+var rl = ratelimit.New(20) // 20 rps
 
 type Media struct {
 	TypeName []byte
@@ -142,6 +145,8 @@ func (i *InstaData) GetData(postID string) error {
 }
 
 func getData(postID string) (gjson.Result, error) {
+	rl.Take() // Rate limit to 20 rps
+
 	req, res := fasthttp.AcquireRequest(), fasthttp.AcquireResponse()
 	defer func() {
 		fasthttp.ReleaseRequest(req)
