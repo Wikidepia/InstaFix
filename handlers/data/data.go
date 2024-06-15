@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"instafix/utils"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -76,7 +77,11 @@ func (i *InstaData) GetData(postID string) error {
 
 	item := data.Get("shortcode_media")
 	if !item.Exists() {
-		return errors.New("shortcode_media not found")
+		item = data.Get("xdt_shortcode_media")
+		if !item.Exists() {
+			log.Error().Str("postID", postID).Msg("Failed to parse data from Instagram")
+			return ErrNotFound
+		}
 	}
 
 	media := []gjson.Result{item}
@@ -300,17 +305,56 @@ func parseGQLData(postID string, req *fasthttp.Request, res *fasthttp.Response) 
 	req.Reset()
 	res.Reset()
 
-	req.Header.SetMethod("GET")
-	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
-	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
-	req.Header.Set("Connection", "close")
-	req.Header.Set("Sec-Fetch-Mode", "navigate")
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36")
-	req.Header.Set("Referer", "https://www.instagram.com/p/"+postID+"/")
+	req.Header.SetMethod("POST")
+	req.Header.Set("accept", "*/*")
+	req.Header.Set("accept-language", "en-US,en;q=0.9")
+	req.Header.Set("content-type", "application/x-www-form-urlencoded")
+	req.Header.Set("origin", "https://www.instagram.com")
+	req.Header.Set("priority", "u=1, i")
+	req.Header.Set("sec-ch-prefers-color-scheme", "dark")
+	req.Header.Set("sec-ch-ua", `"Google Chrome";v="125", "Chromium";v="125", "Not.A/Brand";v="24"`)
+	req.Header.Set("sec-ch-ua-full-version-list", `"Google Chrome";v="125.0.6422.142", "Chromium";v="125.0.6422.142", "Not.A/Brand";v="24.0.0.0"`)
+	req.Header.Set("sec-ch-ua-mobile", "?0")
+	req.Header.Set("sec-ch-ua-model", `""`)
+	req.Header.Set("sec-ch-ua-platform", `"macOS"`)
+	req.Header.Set("sec-ch-ua-platform-version", `"12.7.4"`)
+	req.Header.Set("sec-fetch-dest", "empty")
+	req.Header.Set("sec-fetch-mode", "cors")
+	req.Header.Set("sec-fetch-site", "same-origin")
+	req.Header.Set("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36")
+	req.Header.Set("x-asbd-id", "129477")
+	req.Header.Set("x-bloks-version-id", "e2004666934296f275a5c6b2c9477b63c80977c7cc0fd4b9867cb37e36092b68")
+	req.Header.Set("x-fb-friendly-name", "PolarisPostActionLoadPostQueryQuery")
+	req.Header.Set("x-ig-app-id", "936619743392459")
 
 	req.SetRequestURI("https://www.instagram.com/graphql/query/")
-	req.URI().QueryArgs().Add("query_hash", "b3055c01b4b222b8a47dc12b090e4e64")
-	req.URI().QueryArgs().Add("variables", "{\"shortcode\":\""+postID+"\"}")
+	gqlParams := url.Values{
+		"av":                       {"0"},
+		"__d":                      {"www"},
+		"__user":                   {"0"},
+		"__a":                      {"1"},
+		"__req":                    {"k"},
+		"__hs":                     {"19888.HYP:instagram_web_pkg.2.1..0.0"},
+		"dpr":                      {"2"},
+		"__ccg":                    {"UNKNOWN"},
+		"__rev":                    {"1014227545"},
+		"__s":                      {"trbjos:n8dn55:yev1rm"},
+		"__hsi":                    {"7380500578385702299"},
+		"__dyn":                    {"7xeUjG1mxu1syUbFp40NonwgU7SbzEdF8aUco2qwJw5ux609vCwjE1xoswaq0yE6ucw5Mx62G5UswoEcE7O2l0Fwqo31w9a9wtUd8-U2zxe2GewGw9a362W2K0zK5o4q3y1Sx-0iS2Sq2-azo7u3C2u2J0bS1LwTwKG1pg2fwxyo6O1FwlEcUed6goK2O4UrAwCAxW6Uf9EObzVU8U"},
+		"__csr":                    {"n2Yfg_5hcQAG5mPtfEzil8Wn-DpKGBXhdczlAhrK8uHBAGuKCJeCieLDyExenh68aQAKta8p8ShogKkF5yaUBqCpF9XHmmhoBXyBKbQp0HCwDjqoOepV8Tzk8xeXqAGFTVoCciGaCgvGUtVU-u5Vp801nrEkO0rC58xw41g0VW07ISyie2W1v7F0CwYwwwvEkw8K5cM0VC1dwdi0hCbc094w6MU1xE02lzw"},
+		"__comet_req":              {"7"},
+		"lsd":                      {"AVoPBTXMX0Y"},
+		"jazoest":                  {"2882"},
+		"__spin_r":                 {"1014227545"},
+		"__spin_b":                 {"trunk"},
+		"__spin_t":                 {"1718406700"},
+		"fb_api_caller_class":      {"RelayModern"},
+		"fb_api_req_friendly_name": {"PolarisPostActionLoadPostQueryQuery"},
+		"variables":                {`{"shortcode":"` + postID + `","fetch_comment_count":40,"parent_comment_count":24,"child_comment_count":3,"fetch_like_count":10,"fetch_tagged_user_count":null,"fetch_preview_comment_count":2,"has_threaded_comments":true,"hoisted_comment_id":null,"hoisted_reply_id":null}`},
+		"server_timestamps":        {"true"},
+		"doc_id":                   {"25531498899829322"},
+	}
+	req.SetBodyString(gqlParams.Encode())
 
 	if err := client.DoTimeout(req, res, timeout); err != nil {
 		return nil, err
