@@ -60,6 +60,7 @@ func init() {
 func main() {
 	listenAddr := flag.String("listen", "0.0.0.0:3000", "Address to listen on")
 	gridCacheSize := flag.String("grid-cache-size", "25GB", "Grid cache size")
+	remoteScraperAddr := flag.String("remote-scraper", "", "Remote scraper address")
 	flag.Parse()
 
 	app := fiber.New()
@@ -76,6 +77,14 @@ func main() {
 
 	// Close database when app closes
 	defer data.DB.Close()
+
+	// Initialize remote scraper
+	if *remoteScraperAddr != "" {
+		if !strings.HasPrefix(*remoteScraperAddr, "http") {
+			log.Fatal().Msg("Invalid remote scraper address")
+		}
+		data.RemoteScraperAddr = *remoteScraperAddr
+	}
 
 	// Initialize zerolog
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix

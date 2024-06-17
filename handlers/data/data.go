@@ -39,6 +39,8 @@ var (
 
 var rl = ratelimit.New(20) // 20 rps
 
+var RemoteScraperAddr string
+
 type Media struct {
 	TypeName []byte
 	URL      []byte
@@ -66,6 +68,24 @@ func (i *InstaData) GetData(postID string) error {
 		}
 		log.Info().Str("postID", postID).Msg("Data parsed from cache")
 		return nil
+	}
+
+	// Scrape from remote scraper, if available
+	if len(RemoteScraperAddr) > 0 {
+		req, res := fasthttp.AcquireRequest(), fasthttp.AcquireResponse()
+		defer func() {
+			fasthttp.ReleaseRequest(req)
+			fasthttp.ReleaseResponse(res)
+		}()
+		req.Header.SetMethod("GET")
+		req.SetRequestURI(RemoteScraperAddr + "/scrape/" + postID)
+		if err := client.DoTimeout(req, res, timeout); err == nil && res.StatusCode() == fasthttp.StatusOK {
+			remoteBody, _ := res.BodyGunzip() // skip err, we don't care. it will be skipped anyway
+			if err := binary.Unmarshal(remoteBody, i); err == nil {
+				log.Info().Str("postID", postID).Msg("Data parsed from remote scraper")
+				return nil
+			}
+		}
 	}
 
 	data, err := getData(postID)
