@@ -78,10 +78,11 @@ func (i *InstaData) GetData(postID string) error {
 			fasthttp.ReleaseResponse(res)
 		}()
 		req.Header.SetMethod("GET")
+		req.Header.Set("Accept-Encoding", "gzip, deflate, br")
 		req.SetRequestURI(RemoteScraperAddr + "/scrape/" + postID)
 		if err := client.DoTimeout(req, res, timeout); err == nil && res.StatusCode() == fasthttp.StatusOK {
-			remoteBody, _ := res.BodyGunzip() // skip err, we don't care. it will be skipped anyway
-			if err := binary.Unmarshal(remoteBody, i); err == nil {
+			gzipBody, _ := res.BodyGunzip()
+			if err := binary.Unmarshal(gzipBody, i); err == nil {
 				log.Info().Str("postID", postID).Msg("Data parsed from remote scraper")
 				return nil
 			}
