@@ -71,6 +71,7 @@ func (i *InstaData) GetData(postID string) error {
 	}
 
 	// Scrape from remote scraper, if available
+	var bb []byte // marshaled data
 	if len(RemoteScraperAddr) > 0 {
 		req, res := fasthttp.AcquireRequest(), fasthttp.AcquireResponse()
 		defer func() {
@@ -81,66 +82,65 @@ func (i *InstaData) GetData(postID string) error {
 		req.Header.Set("Accept-Encoding", "gzip, deflate, br")
 		req.SetRequestURI(RemoteScraperAddr + "/scrape/" + postID)
 		if err := client.DoTimeout(req, res, timeout); err == nil && res.StatusCode() == fasthttp.StatusOK {
-			gzipBody, _ := res.BodyGunzip()
-			if err := binary.Unmarshal(gzipBody, i); err == nil {
+			bb, _ = res.BodyGunzip()
+			if err := binary.Unmarshal(bb, i); err == nil {
 				log.Info().Str("postID", postID).Msg("Data parsed from remote scraper")
-				return nil
 			}
 		}
-	}
-
-	data, err := getData(postID)
-	if err != nil {
-		if err != ErrNotFound {
-			log.Error().Str("postID", postID).Err(err).Msg("Failed to get data from Instagram")
-		} else {
-			log.Warn().Str("postID", postID).Err(err).Msg("Post not found; err getData")
+	} else {
+		data, err := getData(postID)
+		if err != nil {
+			if err != ErrNotFound {
+				log.Error().Str("postID", postID).Err(err).Msg("Failed to get data from Instagram")
+			} else {
+				log.Warn().Str("postID", postID).Err(err).Msg("Post not found; err getData")
+			}
+			return err
 		}
-		return err
-	}
 
-	item := data.Get("shortcode_media")
-	if !item.Exists() {
-		item = data.Get("xdt_shortcode_media")
+		item := data.Get("shortcode_media")
 		if !item.Exists() {
-			log.Error().Str("postID", postID).Msg("Failed to parse data from Instagram")
-			return ErrNotFound
+			item = data.Get("xdt_shortcode_media")
+			if !item.Exists() {
+				log.Error().Str("postID", postID).Msg("Failed to parse data from Instagram")
+				return ErrNotFound
+			}
 		}
-	}
 
-	media := []gjson.Result{item}
-	if item.Get("edge_sidecar_to_children").Exists() {
-		media = item.Get("edge_sidecar_to_children.edges").Array()
-	}
-
-	i.PostID = utils.S2B(postID)
-
-	// Get username
-	i.Username = []byte(item.Get("owner.username").String())
-
-	// Get caption
-	i.Caption = bytes.TrimSpace([]byte(item.Get("edge_media_to_caption.edges.0.node.text").String()))
-
-	// Get medias
-	i.Medias = make([]Media, 0, len(media))
-	for _, m := range media {
-		if m.Get("node").Exists() {
-			m = m.Get("node")
+		media := []gjson.Result{item}
+		if item.Get("edge_sidecar_to_children").Exists() {
+			media = item.Get("edge_sidecar_to_children.edges").Array()
 		}
-		mediaURL := m.Get("video_url")
-		if !mediaURL.Exists() {
-			mediaURL = m.Get("display_url")
-		}
-		i.Medias = append(i.Medias, Media{
-			TypeName: []byte(m.Get("__typename").String()),
-			URL:      []byte(mediaURL.String()),
-		})
-	}
 
-	bb, err := binary.Marshal(i)
-	if err != nil {
-		log.Error().Str("postID", postID).Err(err).Msg("Failed to marshal data")
-		return err
+		i.PostID = utils.S2B(postID)
+
+		// Get username
+		i.Username = []byte(item.Get("owner.username").String())
+
+		// Get caption
+		i.Caption = bytes.TrimSpace([]byte(item.Get("edge_media_to_caption.edges.0.node.text").String()))
+
+		// Get medias
+		i.Medias = make([]Media, 0, len(media))
+		for _, m := range media {
+			if m.Get("node").Exists() {
+				m = m.Get("node")
+			}
+			mediaURL := m.Get("video_url")
+			if !mediaURL.Exists() {
+				mediaURL = m.Get("display_url")
+			}
+			i.Medias = append(i.Medias, Media{
+				TypeName: []byte(m.Get("__typename").String()),
+				URL:      []byte(mediaURL.String()),
+			})
+		}
+
+		bb, err = binary.Marshal(i)
+		if err != nil {
+			log.Error().Str("postID", postID).Err(err).Msg("Failed to marshal data")
+			return err
+		}
 	}
 
 	batch := DB.NewBatch()
