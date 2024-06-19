@@ -88,7 +88,7 @@ func main() {
 
 	// Initialize zerolog
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 
 	// Parse grid-cache-size
 	gridCacheSizeParsed, err := byteSizeStrToInt(*gridCacheSize)
