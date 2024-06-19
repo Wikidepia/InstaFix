@@ -63,7 +63,7 @@ func (i *InstaData) GetData(postID string) error {
 		if err != nil {
 			return err
 		}
-		log.Info().Str("postID", postID).Msg("Data parsed from cache")
+		log.Debug().Str("postID", postID).Msg("Data parsed from cache")
 		return nil
 	}
 
