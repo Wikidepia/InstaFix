@@ -160,7 +160,7 @@ func evictStatic(threshold int64) {
 func evictCache() {
 	iter, err := data.DB.NewIter(&pebble.IterOptions{LowerBound: []byte("exp-")})
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to create iterator")
+		log.Error().Err(err).Msg("Failed to create iterator when evicting cache")
 		return
 	}
 	defer iter.Close()
@@ -179,11 +179,10 @@ func evictCache() {
 				batch.Delete(iter.Value(), pebble.NoSync)
 			}
 		} else {
-			log.Error().Err(err).Msg("Failed to parse expire timestamp")
+			log.Error().Err(err).Msg("Failed to parse expire timestamp in cache")
 		}
-
 	}
 	if err := batch.Commit(pebble.NoSync); err != nil {
-		log.Error().Err(err).Msg("Failed to commit batch")
+		log.Error().Err(err).Msg("Failed to write when evicting cache")
 	}
 }
