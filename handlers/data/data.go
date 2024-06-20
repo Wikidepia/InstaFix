@@ -68,7 +68,6 @@ func (i *InstaData) GetData(postID string) error {
 	}
 
 	// Scrape from remote scraper, if available
-	var bb []byte // marshaled data
 	if len(RemoteScraperAddr) > 0 {
 		req, res := fasthttp.AcquireRequest(), fasthttp.AcquireResponse()
 		defer func() {
@@ -79,8 +78,8 @@ func (i *InstaData) GetData(postID string) error {
 		req.Header.Set("Accept-Encoding", "gzip, deflate, br")
 		req.SetRequestURI(RemoteScraperAddr + "/scrape/" + postID)
 		if err := client.DoTimeout(req, res, timeout); err == nil && res.StatusCode() == fasthttp.StatusOK {
-			bb, _ = res.BodyGunzip()
-			if err := binary.Unmarshal(bb, i); err == nil {
+			iDataGunzip, _ := res.BodyGunzip()
+			if err := binary.Unmarshal(iDataGunzip, i); err == nil {
 				log.Info().Str("postID", postID).Msg("Data parsed from remote scraper")
 			}
 		}
@@ -132,23 +131,23 @@ func (i *InstaData) GetData(postID string) error {
 				URL:      mediaURL.String(),
 			})
 		}
-
-		bb, err = binary.Marshal(i)
-		if err != nil {
-			log.Error().Str("postID", postID).Err(err).Msg("Failed to marshal data")
-			return err
-		}
 	}
 
 	// Replace all media urls cdn to scontent.cdninstagram.com
 	for n, media := range i.Medias {
-		u, err := url.Parse(string(media.URL))
+		u, err := url.Parse(media.URL)
 		if err != nil {
 			log.Error().Str("postID", postID).Err(err).Msg("Failed to parse media URL")
 			return err
 		}
 		u.Host = "scontent.cdninstagram.com"
 		i.Medias[n].URL = u.String()
+	}
+
+	bb, err := binary.Marshal(i)
+	if err != nil {
+		log.Error().Str("postID", postID).Err(err).Msg("Failed to marshal data")
+		return err
 	}
 
 	batch := DB.NewBatch()
