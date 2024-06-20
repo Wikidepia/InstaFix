@@ -140,6 +140,17 @@ func (i *InstaData) GetData(postID string) error {
 		}
 	}
 
+	// Replace all media urls cdn to scontent.cdninstagram.com
+	for n, media := range i.Medias {
+		u, err := url.Parse(string(media.URL))
+		if err != nil {
+			log.Error().Str("postID", postID).Err(err).Msg("Failed to parse media URL")
+			return err
+		}
+		u.Host = "scontent.cdninstagram.com"
+		i.Medias[n].URL = []byte(u.String())
+	}
+
 	batch := DB.NewBatch()
 	// Write cache to DB
 	if err := batch.Set(utils.S2B(postID), bb, pebble.Sync); err != nil {
