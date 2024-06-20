@@ -1,15 +1,14 @@
 package handlers
 
 import (
-	"bytes"
 	data "instafix/handlers/data"
-	"instafix/utils"
 	"io"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -56,7 +55,7 @@ func Grid() fiber.Handler {
 		// Filter media, only the first 4 image
 		mediaList := make([]data.Media, 0, 4)
 		for i, media := range item.Medias {
-			if !bytes.Contains(media.TypeName, []byte("Image")) {
+			if !strings.Contains(media.TypeName, "Image") {
 				continue
 			}
 			if len(mediaList) == cap(mediaList) {
@@ -80,7 +79,7 @@ func Grid() fiber.Handler {
 
 			go func(i int, media data.Media) {
 				defer wg.Done()
-				req, err := http.NewRequest(http.MethodGet, utils.B2S(media.URL), http.NoBody)
+				req, err := http.NewRequest(http.MethodGet, media.URL, http.NoBody)
 				if err != nil {
 					return
 				}

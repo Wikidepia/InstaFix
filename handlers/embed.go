@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"bytes"
 	"instafix/utils"
 	"instafix/views"
 	"net/url"
@@ -108,17 +107,17 @@ func Embed() fiber.Handler {
 		var sb strings.Builder
 		sb.Grow(32) // 32 bytes should be enough for most cases
 
-		viewsData.Title = "@" + utils.B2S(item.Username)
+		viewsData.Title = "@" + item.Username
 		// Gallery do not have any caption
 		if !isGallery {
-			viewsData.Description = utils.B2S(item.Caption)
+			viewsData.Description = item.Caption
 			if len(viewsData.Description) > 255 {
 				viewsData.Description = utils.Substr(viewsData.Description, 0, 250) + "..."
 			}
 		}
 
 		typename := item.Medias[max(1, mediaNum)-1].TypeName
-		isImage := bytes.Contains(typename, []byte("Image")) || bytes.Contains(typename, []byte("StoryVideo"))
+		isImage := strings.Contains(typename, "Image") || strings.Contains(typename, "StoryVideo")
 		switch {
 		case mediaNum == 0 && isImage && len(item.Medias) > 1:
 			viewsData.Card = "summary_large_image"

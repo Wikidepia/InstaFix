@@ -2,7 +2,6 @@ package handlers
 
 import (
 	data "instafix/handlers/data"
-	"instafix/utils"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -27,6 +26,6 @@ func Images() fiber.Handler {
 			return c.SendStatus(fiber.StatusNotFound)
 		}
 		imageURL := item.Medias[max(1, mediaNum)-1].URL
-		return c.Redirect(utils.B2S(imageURL), fiber.StatusFound)
+		return c.Redirect(imageURL, fiber.StatusFound)
 	}
 }

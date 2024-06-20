@@ -39,14 +39,14 @@ var (
 var RemoteScraperAddr string
 
 type Media struct {
-	TypeName []byte
-	URL      []byte
+	TypeName string
+	URL      string
 }
 
 type InstaData struct {
-	PostID   []byte
-	Username []byte
-	Caption  []byte
+	PostID   string
+	Username string
+	Caption  string
 	Medias   []Media
 }
 
@@ -109,13 +109,13 @@ func (i *InstaData) GetData(postID string) error {
 			media = item.Get("edge_sidecar_to_children.edges").Array()
 		}
 
-		i.PostID = utils.S2B(postID)
+		i.PostID = postID
 
 		// Get username
-		i.Username = []byte(item.Get("owner.username").String())
+		i.Username = item.Get("owner.username").String()
 
 		// Get caption
-		i.Caption = bytes.TrimSpace([]byte(item.Get("edge_media_to_caption.edges.0.node.text").String()))
+		i.Caption = strings.TrimSpace(item.Get("edge_media_to_caption.edges.0.node.text").String())
 
 		// Get medias
 		i.Medias = make([]Media, 0, len(media))
@@ -128,8 +128,8 @@ func (i *InstaData) GetData(postID string) error {
 				mediaURL = m.Get("display_url")
 			}
 			i.Medias = append(i.Medias, Media{
-				TypeName: []byte(m.Get("__typename").String()),
-				URL:      []byte(mediaURL.String()),
+				TypeName: m.Get("__typename").String(),
+				URL:      mediaURL.String(),
 			})
 		}
 
@@ -148,7 +148,7 @@ func (i *InstaData) GetData(postID string) error {
 			return err
 		}
 		u.Host = "scontent.cdninstagram.com"
-		i.Medias[n].URL = []byte(u.String())
+		i.Medias[n].URL = u.String()
 	}
 
 	batch := DB.NewBatch()
