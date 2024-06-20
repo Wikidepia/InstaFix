@@ -2,8 +2,6 @@
 
 > Instagram is a trademark of Instagram, Inc. This app is not affiliated with Instagram, Inc.
 
-**As of 14 Jun, Instagram starts to block scraping from embeds. I am currently working on a solution.**
-
 InstaFix serves fixed Instagram image and video embeds. Heavily inspired by [fxtwitter.com](https://fxtwitter.com).
 
 ## How to use
