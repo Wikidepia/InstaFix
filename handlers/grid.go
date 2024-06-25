@@ -141,7 +141,7 @@ func Grid() fiber.Handler {
 		}
 		defer f.Close()
 
-		if err := webp.Encode(f, grid, webp.Quality(0.75)); err != nil {
+		if err := webp.Encode(f, grid, webp.Quality(0.85)); err != nil {
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
 		return c.SendFile(gridFname)
