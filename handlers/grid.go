@@ -15,7 +15,6 @@ import (
 	"git.sr.ht/~jackmordaunt/go-libwebp/webp"
 	"github.com/gofiber/fiber/v2"
 	gim "github.com/ozankasikci/go-image-merge"
-	"go.uber.org/ratelimit"
 )
 
 var transport = &http.Transport{
@@ -28,7 +27,6 @@ var transport = &http.Transport{
 	DisableKeepAlives:     true,
 }
 var timeout = 10 * time.Second
-var rl = ratelimit.New(1)
 
 func Grid() fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -134,7 +132,6 @@ func Grid() fiber.Handler {
 		}
 
 		// Write grid to static folder
-		rl.Take() // Rate limit, trying to avoid high CPU usage
 		f, err := os.Create(gridFname)
 		if err != nil {
 			return c.SendStatus(fiber.StatusInternalServerError)

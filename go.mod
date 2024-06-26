@@ -16,7 +16,6 @@ require (
 	github.com/tidwall/gjson v1.17.1
 	github.com/valyala/bytebufferpool v1.0.0
 	github.com/valyala/fasthttp v1.55.0
-	go.uber.org/ratelimit v0.3.1
 	golang.org/x/net v0.26.0
 )
 
@@ -24,7 +23,6 @@ require (
 	github.com/DataDog/zstd v1.5.5 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/andybalholm/cascadia v1.3.2 // indirect
-	github.com/benbjohnson/clock v1.3.5 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cockroachdb/errors v1.11.3 // indirect
