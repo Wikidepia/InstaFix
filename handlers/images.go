@@ -15,7 +15,7 @@ func Images() fiber.Handler {
 		}
 
 		// Get data
-		item := &data.InstaData{}
+		var item data.InstaData
 		err = item.GetData(postID)
 		if err != nil {
 			return c.SendStatus(fiber.StatusNotFound)
