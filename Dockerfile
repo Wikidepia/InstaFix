@@ -20,7 +20,7 @@ COPY utils/ ./utils/
 COPY views/ ./views/
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags '-extldflags "-static"'
+RUN go build -tags netgo -ldflags '-extldflags "-static"'
 
 # Run in scratch container
 FROM scratch
