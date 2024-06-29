@@ -99,9 +99,9 @@ func main() {
 	// Evict cache every minute
 	go func() {
 		for {
+			time.Sleep(5 * time.Minute)
 			evictStatic(gridCacheSizeParsed)
 			evictCache()
-			time.Sleep(5 * time.Minute)
 		}
 	}()
 
@@ -130,7 +130,9 @@ func main() {
 	app.Get("/grid/:postID", handlers.Grid())
 	app.Get("/oembed", handlers.OEmbed())
 
-	app.Listen(*listenAddr)
+	if err := app.Listen(*listenAddr); err != nil {
+		log.Fatal().Err(err).Msg("Failed to listen")
+	}
 }
 
 // Remove file in static folder until below threshold
