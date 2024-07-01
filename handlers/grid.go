@@ -5,7 +5,6 @@ import (
 	"image"
 	"image/draw"
 	"image/jpeg"
-	data "instafix/handlers/data"
 	"math"
 	"net"
 	"net/http"
@@ -14,6 +13,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	scraper "instafix/handlers/scraper"
 
 	"git.sr.ht/~jackmordaunt/go-libwebp/webp"
 	"github.com/RyanCarrier/dijkstra/v2"
@@ -117,8 +118,8 @@ func Grid() fiber.Handler {
 		}
 
 		// Get data
-		var item data.InstaData
-		err := item.GetData(postID)
+		item := &scraper.InstaData{PostID: postID}
+		err := item.GetData()
 		if err != nil {
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
@@ -129,7 +130,7 @@ func Grid() fiber.Handler {
 		}
 
 		// Filter media, only the first 4 image
-		var mediaList []data.Media
+		var mediaList []scraper.Media
 		for i, media := range item.Medias {
 			if !strings.Contains(media.TypeName, "Image") {
 				continue
@@ -150,7 +151,7 @@ func Grid() fiber.Handler {
 		for i, media := range mediaList {
 			wg.Add(1)
 
-			go func(i int, media data.Media) {
+			go func(i int, media scraper.Media) {
 				defer wg.Done()
 				req, err := http.NewRequest(http.MethodGet, media.URL, http.NoBody)
 				if err != nil {
