@@ -1,20 +1,24 @@
 package handlers
 
 import (
+	"fmt"
+	"image"
+	"image/draw"
+	"image/jpeg"
 	data "instafix/handlers/data"
-	"io"
+	"math"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"git.sr.ht/~jackmordaunt/go-libwebp/webp"
+	"github.com/RyanCarrier/dijkstra/v2"
 	"github.com/gofiber/fiber/v2"
-	gim "github.com/ozankasikci/go-image-merge"
+	"github.com/nfnt/resize"
 )
 
 var transport = &http.Transport{
@@ -27,6 +31,80 @@ var transport = &http.Transport{
 	DisableKeepAlives:     true,
 }
 var timeout = 10 * time.Second
+
+// getHeight returns the height of the rows, imagesWH [w,h]
+func getHeight(imagesWH [][]float64, canvasWidth float64) float64 {
+	var height float64
+	for _, image := range imagesWH {
+		height += image[0] / image[1]
+	}
+	return canvasWidth / height
+}
+
+// costFn returns the cost of the row graph thingy
+func costFn(imagesWH [][]float64, i, j, canvasWidth, maxRowHeight int) float64 {
+	slices := imagesWH[i:j]
+	rowHeight := getHeight(slices, float64(canvasWidth))
+	return math.Pow(math.Abs(rowHeight-float64(maxRowHeight)), 2.0)
+}
+
+func createGraph(imagesWH [][]float64, start int) map[int]uint64 {
+	results := make(map[int]uint64, len(imagesWH))
+	results[start] = 0
+	for i := start + 1; i < len(imagesWH); i++ {
+		if i-start > 3 {
+			break
+		}
+		results[i] = uint64(costFn(imagesWH, start, i, 4000, 500))
+	}
+	return results
+}
+
+// GenerateGrid generates a grid of images
+// based on https://blog.vjeux.com/2014/image/google-plus-layout-find-best-breaks.html
+func GenerateGrid(images []image.Image) image.Image {
+	var imagesWH [][]float64
+	images = append(images, images[len(images)-1])
+	for _, image := range images {
+		imagesWH = append(imagesWH, []float64{float64(image.Bounds().Dx()), float64(image.Bounds().Dy())})
+	}
+
+	graph := dijkstra.NewGraph()
+	for i := 0; i < len(images); i++ {
+		graph.AddVertexAndArcs(i, createGraph(imagesWH, i))
+	}
+
+	// Get the shortest path from 0 to len(images)-1
+	best, err := graph.Shortest(0, len(images)-1)
+	if err != nil {
+		return nil
+	}
+	path := best.Path
+
+	canvas := image.NewNRGBA(image.Rect(0, 0, 2000, 4000))
+
+	oldRowHeight := 0
+	for i := 1; i < len(path); i++ {
+		inRow := images[path[i-1]:path[i]]
+		var rowWH [][]float64
+		for _, image := range inRow {
+			rowWH = append(rowWH, []float64{float64(image.Bounds().Dx()), float64(image.Bounds().Dy())})
+		}
+		rowHeight := getHeight(rowWH, 2000)
+
+		oldImWidth := 0
+		for _, imageOne := range inRow {
+			newWidth := rowHeight * float64(imageOne.Bounds().Dx()) / float64(imageOne.Bounds().Dy())
+			fmt.Println(newWidth, rowHeight)
+			imageOne = resize.Resize(uint(newWidth), uint(rowHeight), imageOne, resize.Bilinear)
+			draw.Draw(canvas, image.Rect(int(oldImWidth), int(oldRowHeight), int(oldImWidth)+int(imageOne.Bounds().Dx()), int(oldRowHeight)+int(imageOne.Bounds().Dy())), imageOne, imageOne.Bounds().Min, draw.Src)
+			oldImWidth += int(newWidth)
+		}
+		oldRowHeight += int(rowHeight)
+	}
+
+	return canvas
+}
 
 func Grid() fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -51,18 +129,15 @@ func Grid() fiber.Handler {
 		}
 
 		// Filter media, only the first 4 image
-		mediaList := make([]data.Media, 0, 4)
+		var mediaList []data.Media
 		for i, media := range item.Medias {
 			if !strings.Contains(media.TypeName, "Image") {
 				continue
 			}
-			if len(mediaList) == cap(mediaList) {
-				break
-			}
 			mediaList = append(mediaList, item.Medias[i])
 		}
 
-		images := make([]string, len(mediaList))
+		images := make([]image.Image, len(mediaList))
 		var wg sync.WaitGroup
 
 		dirname, err := os.MkdirTemp("static", postID+"*")
@@ -89,45 +164,17 @@ func Grid() fiber.Handler {
 				}
 				defer res.Body.Close()
 
-				fname := filepath.Join(dirname, strconv.Itoa(i)+".jpg")
-				file, err := os.Create(fname)
+				images[i], err = jpeg.Decode(res.Body)
 				if err != nil {
 					return
 				}
-
-				_, err = io.Copy(file, res.Body)
-				if err != nil {
-					return
-				}
-
-				images[i] = fname
 			}(i, media)
 		}
 		wg.Wait()
 
 		// Create grid Images
-		var gridIm []*gim.Grid
-		for _, image := range images {
-			if image == "" {
-				continue
-			}
-			gridIm = append(gridIm, &gim.Grid{
-				ImageFilePath: image,
-			})
-		}
-
-		if len(gridIm) == 0 {
-			return c.SendStatus(fiber.StatusNotFound)
-		} else if len(gridIm) == 1 {
-			return c.Redirect("/images/" + postID + "/1")
-		}
-
-		countY := 1
-		if len(gridIm) > 2 {
-			countY = 2
-		}
-		grid, err := gim.New(gridIm, 2, countY).Merge()
-		if err != nil {
+		grid := GenerateGrid(images)
+		if grid == nil {
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
 
