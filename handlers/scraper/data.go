@@ -20,6 +20,7 @@ import (
 	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttp/fasthttpproxy"
 	"golang.org/x/net/html"
+	"golang.org/x/sync/singleflight"
 )
 
 var gjsonNil = gjson.Result{}
@@ -37,6 +38,8 @@ var (
 )
 
 var RemoteScraperAddr string
+
+var sflightScraper singleflight.Group
 
 type Media struct {
 	TypeName string
@@ -67,12 +70,18 @@ func (i *InstaData) GetData() error {
 		return nil
 	}
 
-	if err = i.ScrapeData(); err != nil {
-		if err != ErrNotFound {
-			log.Error().Str("postID", i.PostID).Err(err).Msg("Failed to get data from Instagram")
-		} else {
-			log.Warn().Str("postID", i.PostID).Err(err).Msg("Post not found")
+	_, err, _ = sflightScraper.Do(i.PostID, func() (interface{}, error) {
+		if err := i.ScrapeData(); err != nil {
+			if err != ErrNotFound {
+				log.Error().Str("postID", i.PostID).Err(err).Msg("Failed to get data from Instagram")
+			} else {
+				log.Warn().Str("postID", i.PostID).Err(err).Msg("Post not found")
+			}
+			return nil, err
 		}
+		return true, nil
+	})
+	if err != nil {
 		return err
 	}
 
