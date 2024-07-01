@@ -13,8 +13,8 @@ RUN go mod download
 # https://docs.docker.com/engine/reference/builder/#copy
 COPY *.go ./
 COPY handlers/ ./handlers/
-COPY handlers/data/ ./handlers/data/
-# NO-OP in case handlers/data/ was already copied previously
+COPY handlers/scraper/ ./handlers/scraper/
+# NO-OP in case handlers/scraper/ was already copied previously
 RUN true
 COPY utils/ ./utils/
 COPY views/ ./views/
