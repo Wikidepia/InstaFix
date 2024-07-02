@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"image"
 	"image/draw"
 	"image/jpeg"
@@ -34,77 +33,101 @@ var transport = &http.Transport{
 var timeout = 10 * time.Second
 
 // getHeight returns the height of the rows, imagesWH [w,h]
-func getHeight(imagesWH [][]float64, canvasWidth float64) float64 {
+func getHeight(imagesWH [][]float64, canvasWidth int) float64 {
 	var height float64
 	for _, image := range imagesWH {
 		height += image[0] / image[1]
 	}
-	return canvasWidth / height
+	return float64(canvasWidth) / height
 }
 
 // costFn returns the cost of the row graph thingy
 func costFn(imagesWH [][]float64, i, j, canvasWidth, maxRowHeight int) float64 {
 	slices := imagesWH[i:j]
-	rowHeight := getHeight(slices, float64(canvasWidth))
-	return math.Pow(math.Abs(rowHeight-float64(maxRowHeight)), 2.0)
+	rowHeight := getHeight(slices, canvasWidth)
+	return math.Pow(float64(float64(maxRowHeight)-rowHeight), 2)
 }
 
-func createGraph(imagesWH [][]float64, start int) map[int]uint64 {
+func createGraph(imagesWH [][]float64, start, canvasWidth int) map[int]uint64 {
 	results := make(map[int]uint64, len(imagesWH))
 	results[start] = 0
 	for i := start + 1; i < len(imagesWH); i++ {
+		// Max 3 images for every row
 		if i-start > 3 {
 			break
 		}
-		results[i] = uint64(costFn(imagesWH, start, i, 4000, 500))
+		results[i] = uint64(costFn(imagesWH, start, i, canvasWidth, 1000))
 	}
 	return results
 }
 
+func avg(n []float64) float64 {
+	var sum float64
+	for _, v := range n {
+		sum += v
+	}
+	return sum / float64(len(n))
+}
+
 // GenerateGrid generates a grid of images
 // based on https://blog.vjeux.com/2014/image/google-plus-layout-find-best-breaks.html
-func GenerateGrid(images []image.Image) image.Image {
+func GenerateGrid(images []image.Image) (image.Image, error) {
 	var imagesWH [][]float64
-	images = append(images, images[len(images)-1])
+	images = append(images, image.Rect(0, 0, 0, 0)) // Needed as for some reason the last image is not added
 	for _, image := range images {
 		imagesWH = append(imagesWH, []float64{float64(image.Bounds().Dx()), float64(image.Bounds().Dy())})
 	}
 
+	// Calculate canvas width by taking the average of width of all images
+	// There should be a better way to do this
+	var allWidth []float64
+	for _, image := range imagesWH {
+		allWidth = append(allWidth, image[0])
+	}
+	canvasWidth := int(avg(allWidth) * 2)
+
 	graph := dijkstra.NewGraph()
-	for i := 0; i < len(images); i++ {
-		graph.AddVertexAndArcs(i, createGraph(imagesWH, i))
+	for i := range images {
+		graph.AddVertexAndArcs(i, createGraph(imagesWH, i, canvasWidth))
 	}
 
 	// Get the shortest path from 0 to len(images)-1
 	best, err := graph.Shortest(0, len(images)-1)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	path := best.Path
 
-	canvas := image.NewNRGBA(image.Rect(0, 0, 2000, 4000))
-
-	oldRowHeight := 0
+	canvasHeight := 0
+	var heightRows []int
+	// Calculate height of each row and canvas height
 	for i := 1; i < len(path); i++ {
 		inRow := images[path[i-1]:path[i]]
 		var rowWH [][]float64
 		for _, image := range inRow {
 			rowWH = append(rowWH, []float64{float64(image.Bounds().Dx()), float64(image.Bounds().Dy())})
 		}
-		rowHeight := getHeight(rowWH, 2000)
-
-		oldImWidth := 0
-		for _, imageOne := range inRow {
-			newWidth := rowHeight * float64(imageOne.Bounds().Dx()) / float64(imageOne.Bounds().Dy())
-			fmt.Println(newWidth, rowHeight)
-			imageOne = resize.Resize(uint(newWidth), uint(rowHeight), imageOne, resize.Bilinear)
-			draw.Draw(canvas, image.Rect(int(oldImWidth), int(oldRowHeight), int(oldImWidth)+int(imageOne.Bounds().Dx()), int(oldRowHeight)+int(imageOne.Bounds().Dy())), imageOne, imageOne.Bounds().Min, draw.Src)
-			oldImWidth += int(newWidth)
-		}
-		oldRowHeight += int(rowHeight)
+		rowHeight := getHeight(rowWH, canvasWidth)
+		heightRows = append(heightRows, int(rowHeight))
+		canvasHeight += int(rowHeight)
 	}
 
-	return canvas
+	// NRGBA as libwebp-go loves NRGBA
+	canvas := image.NewNRGBA(image.Rect(0, 0, canvasWidth, canvasHeight))
+
+	oldRowHeight := 0
+	for i := 1; i < len(path); i++ {
+		inRow := images[path[i-1]:path[i]]
+		oldImWidth := 0
+		for _, imageOne := range inRow {
+			newWidth := float64(heightRows[i-1]) * float64(imageOne.Bounds().Dx()) / float64(imageOne.Bounds().Dy())
+			imageOne = resize.Resize(uint(newWidth), uint(heightRows[i-1]), imageOne, resize.MitchellNetravali)
+			draw.Draw(canvas, image.Rect(oldImWidth, oldRowHeight, oldImWidth+imageOne.Bounds().Dx(), oldRowHeight+imageOne.Bounds().Dy()), imageOne, imageOne.Bounds().Min, draw.Src)
+			oldImWidth += int(newWidth)
+		}
+		oldRowHeight += heightRows[i-1]
+	}
+	return canvas, nil
 }
 
 func Grid() fiber.Handler {
@@ -124,12 +147,10 @@ func Grid() fiber.Handler {
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
 
-		// Only get first 4 images
 		if len(item.Medias) == 1 {
 			return c.Redirect("/images/" + postID + "/1")
 		}
 
-		// Filter media, only the first 4 image
 		var mediaList []scraper.Media
 		for i, media := range item.Medias {
 			if !strings.Contains(media.TypeName, "Image") {
@@ -140,12 +161,6 @@ func Grid() fiber.Handler {
 
 		images := make([]image.Image, len(mediaList))
 		var wg sync.WaitGroup
-
-		dirname, err := os.MkdirTemp("static", postID+"*")
-		if err != nil {
-			return c.SendStatus(fiber.StatusInternalServerError)
-		}
-		defer os.RemoveAll(dirname)
 
 		client := http.Client{Transport: transport, Timeout: timeout}
 		for i, media := range mediaList {
@@ -174,20 +189,20 @@ func Grid() fiber.Handler {
 		wg.Wait()
 
 		// Create grid Images
-		grid := GenerateGrid(images)
-		if grid == nil {
-			return c.SendStatus(fiber.StatusInternalServerError)
+		grid, err := GenerateGrid(images)
+		if err != nil {
+			return err
 		}
 
 		// Write grid to static folder
 		f, err := os.Create(gridFname)
 		if err != nil {
-			return c.SendStatus(fiber.StatusInternalServerError)
+			return err
 		}
 		defer f.Close()
 
-		if err := webp.Encode(f, grid, webp.Quality(0.85)); err != nil {
-			return c.SendStatus(fiber.StatusInternalServerError)
+		if err := webp.Encode(f, grid); err != nil {
+			return err
 		}
 		return c.SendFile(gridFname)
 	}
