@@ -16,8 +16,8 @@ import (
 	scraper "instafix/handlers/scraper"
 
 	"github.com/RyanCarrier/dijkstra/v2"
+	"github.com/bamiaux/rez"
 	"github.com/gofiber/fiber/v2"
-	"github.com/nfnt/resize"
 )
 
 var transport = &http.Transport{
@@ -119,8 +119,12 @@ func GenerateGrid(images []image.Image) (image.Image, error) {
 		oldImWidth := 0
 		for _, imageOne := range inRow {
 			newWidth := float64(heightRows[i-1]) * float64(imageOne.Bounds().Dx()) / float64(imageOne.Bounds().Dy())
-			imageOne = resize.Resize(uint(newWidth), uint(heightRows[i-1]), imageOne, resize.MitchellNetravali)
-			draw.Draw(canvas, image.Rect(oldImWidth, oldRowHeight, oldImWidth+imageOne.Bounds().Dx(), oldRowHeight+imageOne.Bounds().Dy()), imageOne, imageOne.Bounds().Min, draw.Src)
+			newImage := image.NewYCbCr(image.Rect(0, 0, int(newWidth), int(heightRows[i-1])), image.YCbCrSubsampleRatio420)
+			// imageOne = resize.Resize(uint(newWidth), uint(heightRows[i-1]), imageOne, resize.MitchellNetravali)
+			if err := rez.Convert(newImage, imageOne, rez.NewBicubicFilter()); err != nil {
+				return nil, err
+			}
+			draw.Draw(canvas, image.Rect(oldImWidth, oldRowHeight, oldImWidth+newImage.Bounds().Dx(), oldRowHeight+newImage.Bounds().Dy()), newImage, newImage.Bounds().Min, draw.Src)
 			oldImWidth += int(newWidth)
 		}
 		oldRowHeight += heightRows[i-1]

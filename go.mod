@@ -9,10 +9,10 @@ require (
 	github.com/PurpleSec/escape v1.0.0
 	github.com/RyanCarrier/dijkstra/v2 v2.0.2
 	github.com/ansrivas/fiberprometheus/v2 v2.6.1
+	github.com/bamiaux/rez v0.0.0-20170731184118-29f4463c688b
 	github.com/cockroachdb/pebble v1.1.1
 	github.com/gofiber/fiber/v2 v2.52.4
 	github.com/kelindar/binary v1.0.19
-	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/rs/zerolog v1.33.0
 	github.com/tdewolff/parse/v2 v2.7.15
 	github.com/tidwall/gjson v1.17.1
