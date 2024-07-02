@@ -77,48 +77,48 @@ func (i *InstaData) GetData() error {
 			} else {
 				log.Warn().Str("postID", i.PostID).Err(err).Msg("Post not found")
 			}
-			return nil, err
+			return false, err
+		}
+
+		// Replace all media urls cdn to scontent.cdninstagram.com
+		for n, media := range i.Medias {
+			u, err := url.Parse(media.URL)
+			if err != nil {
+				log.Error().Str("postID", i.PostID).Err(err).Msg("Failed to parse media URL")
+				return false, err
+			}
+			u.Host = "scontent.cdninstagram.com"
+			i.Medias[n].URL = u.String()
+		}
+
+		bb, err := binary.Marshal(i)
+		if err != nil {
+			log.Error().Str("postID", i.PostID).Err(err).Msg("Failed to marshal data")
+			return false, err
+		}
+
+		batch := DB.NewBatch()
+		// Write cache to DB
+		if err := batch.Set(utils.S2B(i.PostID), bb, pebble.Sync); err != nil {
+			log.Error().Str("postID", i.PostID).Err(err).Msg("Failed to save data to cache")
+			return false, err
+		}
+
+		// Write expire to DB
+		expTime := strconv.FormatInt(time.Now().Add(24*time.Hour).UnixNano(), 10)
+		if err := batch.Set(append([]byte("exp-"), expTime...), utils.S2B(i.PostID), pebble.Sync); err != nil {
+			log.Error().Str("postID", i.PostID).Err(err).Msg("Failed to save data to cache")
+			return false, err
+		}
+
+		// Commit batch
+		if err := batch.Commit(pebble.Sync); err != nil {
+			log.Error().Str("postID", i.PostID).Err(err).Msg("Failed to commit batch")
+			return false, err
 		}
 		return true, nil
 	})
 	if err != nil {
-		return err
-	}
-
-	// Replace all media urls cdn to scontent.cdninstagram.com
-	for n, media := range i.Medias {
-		u, err := url.Parse(media.URL)
-		if err != nil {
-			log.Error().Str("postID", i.PostID).Err(err).Msg("Failed to parse media URL")
-			return err
-		}
-		u.Host = "scontent.cdninstagram.com"
-		i.Medias[n].URL = u.String()
-	}
-
-	bb, err := binary.Marshal(i)
-	if err != nil {
-		log.Error().Str("postID", i.PostID).Err(err).Msg("Failed to marshal data")
-		return err
-	}
-
-	batch := DB.NewBatch()
-	// Write cache to DB
-	if err := batch.Set(utils.S2B(i.PostID), bb, pebble.Sync); err != nil {
-		log.Error().Str("postID", i.PostID).Err(err).Msg("Failed to save data to cache")
-		return err
-	}
-
-	// Write expire to DB
-	expTime := strconv.FormatInt(time.Now().Add(24*time.Hour).UnixNano(), 10)
-	if err := batch.Set(append([]byte("exp-"), expTime...), utils.S2B(i.PostID), pebble.Sync); err != nil {
-		log.Error().Str("postID", i.PostID).Err(err).Msg("Failed to save data to cache")
-		return err
-	}
-
-	// Commit batch
-	if err := batch.Commit(pebble.Sync); err != nil {
-		log.Error().Str("postID", i.PostID).Err(err).Msg("Failed to commit batch")
 		return err
 	}
 	return nil
