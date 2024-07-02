@@ -6,9 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"instafix/handlers"
-	"io/fs"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -157,24 +155,27 @@ func main() {
 // Remove file in static folder until below threshold
 func evictStatic(threshold int64) {
 	var dirSize int64 = 0
-	readSize := func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if !d.IsDir() {
-			if dirSize > threshold {
-				err := os.Remove(path)
-				return err
-			}
-			info, err := d.Info()
-			if err != nil {
-				return err
-			}
-			dirSize += info.Size()
-		}
-		return nil
+	dir, err := os.ReadDir("static")
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to read static folder")
+		return
 	}
-	filepath.WalkDir("static", readSize)
+	for _, d := range dir {
+		if !d.IsDir() {
+			continue
+		}
+		if dirSize > threshold {
+			if err := os.Remove(d.Name()); err != nil {
+				log.Error().Err(err).Msg("Failed to remove file")
+			}
+			continue
+		}
+		info, err := d.Info()
+		if err != nil {
+			continue
+		}
+		dirSize += info.Size()
+	}
 }
 
 // Remove cache from Pebble if already expired
