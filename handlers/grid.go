@@ -84,7 +84,7 @@ func GenerateGrid(images []image.Image) (image.Image, error) {
 	for _, image := range imagesWH {
 		allWidth = append(allWidth, image[0])
 	}
-	canvasWidth := int(avg(allWidth) * 2)
+	canvasWidth := int(avg(allWidth) * 1.5)
 
 	graph := dijkstra.NewGraph()
 	for i := range images {
