@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"flag"
+	"fmt"
 	"instafix/handlers"
 	"io/fs"
 	"os"
@@ -64,7 +66,23 @@ func main() {
 	remoteScraperAddr := flag.String("remote-scraper", "", "Remote scraper address")
 	flag.Parse()
 
-	app := fiber.New()
+	app := fiber.New(fiber.Config{
+		// Override default error handler
+		ErrorHandler: func(ctx *fiber.Ctx, err error) error {
+			// Status code defaults to 500
+			code := fiber.StatusInternalServerError
+
+			// Retrieve the custom status code if it's a *fiber.Error
+			var e *fiber.Error
+			if errors.As(err, &e) {
+				code = e.Code
+			}
+
+			log.Error().Err(err)
+			// Send custom error page
+			return ctx.Status(code).SendString(fmt.Sprintf("Error: %s", err))
+		},
+	})
 
 	recoverConfig := recover.ConfigDefault
 	recoverConfig.EnableStackTrace = true
