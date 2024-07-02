@@ -15,7 +15,6 @@ import (
 
 	scraper "instafix/handlers/scraper"
 
-	"git.sr.ht/~jackmordaunt/go-libwebp/webp"
 	"github.com/RyanCarrier/dijkstra/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/nfnt/resize"
@@ -133,7 +132,7 @@ func GenerateGrid(images []image.Image) (image.Image, error) {
 func Grid() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		postID := c.Params("postID")
-		gridFname := filepath.Join("static", postID+".webp")
+		gridFname := filepath.Join("static", postID+".jpeg")
 
 		// If already exists, return
 		if _, err := os.Stat(gridFname); err == nil {
@@ -201,7 +200,7 @@ func Grid() fiber.Handler {
 		}
 		defer f.Close()
 
-		if err := webp.Encode(f, grid); err != nil {
+		if err := jpeg.Encode(f, grid, &jpeg.Options{Quality: 95}); err != nil {
 			return err
 		}
 		return c.SendFile(gridFname)
