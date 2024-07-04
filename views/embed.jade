@@ -1,4 +1,6 @@
-:go:func Embed(v *ViewsData)
+:go:func Embed(v *model.ViewsData)
+
+:go:import "instafix/views/model"
 
 mixin for(golang)
 	#cmd Precompile jade templates to #{golang} code.

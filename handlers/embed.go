@@ -4,6 +4,7 @@ import (
 	scraper "instafix/handlers/scraper"
 	"instafix/utils"
 	"instafix/views"
+	"instafix/views/model"
 	"net/url"
 	"strconv"
 	"strings"
@@ -29,7 +30,7 @@ func mediaidToCode(mediaID int) string {
 func Embed() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		c.Set("Content-Type", "text/html; charset=utf-8")
-		viewsData := &views.ViewsData{}
+		viewsData := &model.ViewsData{}
 		viewsBuf := bytebufferpool.Get()
 		defer bytebufferpool.Put(viewsBuf)
 

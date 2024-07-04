@@ -1,4 +1,4 @@
-package views
+package model
 
 type ViewsData struct {
 	Card        string

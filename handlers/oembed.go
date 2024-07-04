@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"instafix/views"
+	"instafix/views/model"
 
 	"github.com/PurpleSec/escape"
 	"github.com/gofiber/fiber/v2"
@@ -20,7 +21,7 @@ func OEmbed() fiber.Handler {
 		defer bytebufferpool.Put(viewsBuf)
 
 		// Totally safe 100% valid template 👍
-		OEmbedData := &views.OEmbedData{
+		OEmbedData := &model.OEmbedData{
 			Text: escape.JSON(headingText),
 			URL:  headingURL,
 		}

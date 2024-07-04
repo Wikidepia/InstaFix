@@ -3,6 +3,8 @@
 package views
 
 import (
+	"instafix/views/model"
+
 	pool "github.com/valyala/bytebufferpool"
 )
 
@@ -31,32 +33,32 @@ const (
 	embed__26 = `" type="application/json+oembed" title="`
 )
 
-func Embed(v *ViewsData, buffer *pool.ByteBuffer) {
+func Embed(v *model.ViewsData, buffer *pool.ByteBuffer) {
 
 	buffer.WriteString(embed__0)
 
 	if v.Card != "" {
 		buffer.WriteString(embed__7)
-		WriteAll(v.Card, true, buffer)
+		WriteEscString(v.Card, buffer)
 		buffer.WriteString(embed__3)
 	}
 	if v.Title != "" {
 		buffer.WriteString(embed__9)
-		WriteAll(v.Title, true, buffer)
+		WriteEscString(v.Title, buffer)
 		buffer.WriteString(embed__3)
 	}
 	if v.ImageURL != "" {
 		buffer.WriteString(embed__11)
-		WriteAll(v.ImageURL, true, buffer)
+		WriteEscString(v.ImageURL, buffer)
 		buffer.WriteString(embed__3)
 	}
 	if v.VideoURL != "" {
 		buffer.WriteString(embed__13)
-		WriteAll(v.Width, true, buffer)
+		WriteInt(int64(v.Width), buffer)
 		buffer.WriteString(embed__14)
-		WriteAll(v.Height, true, buffer)
+		WriteInt(int64(v.Height), buffer)
 		buffer.WriteString(embed__15)
-		WriteAll(v.VideoURL, true, buffer)
+		WriteEscString(v.VideoURL, buffer)
 		buffer.WriteString(embed__16)
 
 	}
@@ -64,37 +66,37 @@ func Embed(v *ViewsData, buffer *pool.ByteBuffer) {
 		buffer.WriteString(embed__17)
 	}
 	buffer.WriteString(embed__1)
-	WriteAll(v.URL, true, buffer)
+	WriteEscString(v.URL, buffer)
 	buffer.WriteString(embed__2)
-	WriteAll(v.Description, true, buffer)
+	WriteEscString(v.Description, buffer)
 	buffer.WriteString(embed__3)
 	if v.ImageURL != "" {
 		buffer.WriteString(embed__18)
-		WriteAll(v.ImageURL, true, buffer)
+		WriteEscString(v.ImageURL, buffer)
 		buffer.WriteString(embed__3)
 	}
 	if v.VideoURL != "" {
 		buffer.WriteString(embed__20)
-		WriteAll(v.VideoURL, true, buffer)
+		WriteEscString(v.VideoURL, buffer)
 		buffer.WriteString(embed__21)
-		WriteAll(v.VideoURL, true, buffer)
+		WriteEscString(v.VideoURL, buffer)
 		buffer.WriteString(embed__22)
-		WriteAll(v.Width, true, buffer)
+		WriteInt(int64(v.Width), buffer)
 		buffer.WriteString(embed__23)
-		WriteAll(v.Height, true, buffer)
+		WriteInt(int64(v.Height), buffer)
 		buffer.WriteString(embed__3)
 	}
 	if v.OEmbedURL != "" {
 		buffer.WriteString(embed__25)
-		WriteAll(v.OEmbedURL, false, buffer)
+		buffer.WriteString(v.OEmbedURL)
 		buffer.WriteString(embed__26)
-		WriteAll(v.Title, true, buffer)
+		WriteEscString(v.Title, buffer)
 		buffer.WriteString(embed__3)
 	}
 	buffer.WriteString(embed__4)
-	WriteAll(`0; url = `+v.URL+``, true, buffer)
+	WriteEscString(`0; url = `+v.URL+``, buffer)
 	buffer.WriteString(embed__5)
-	WriteAll(v.URL, true, buffer)
+	WriteEscString(v.URL, buffer)
 	buffer.WriteString(embed__6)
 
 }
