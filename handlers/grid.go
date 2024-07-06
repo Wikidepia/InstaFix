@@ -141,10 +141,6 @@ func Grid() fiber.Handler {
 			return err
 		}
 
-		if len(item.Medias) == 1 {
-			return c.Redirect("/images/" + postID + "/1")
-		}
-
 		// Filter media only include image
 		var mediaURLs []string
 		for _, media := range item.Medias {
@@ -152,6 +148,10 @@ func Grid() fiber.Handler {
 				continue
 			}
 			mediaURLs = append(mediaURLs, media.URL)
+		}
+
+		if len(item.Medias) == 1 || len(mediaURLs) == 1 {
+			return c.Redirect("/images/" + postID + "/1")
 		}
 
 		var wg sync.WaitGroup
