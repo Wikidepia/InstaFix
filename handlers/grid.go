@@ -16,6 +16,7 @@ import (
 	"github.com/RyanCarrier/dijkstra/v2"
 	"github.com/bamiaux/rez"
 	"github.com/gofiber/fiber/v2"
+	"github.com/rs/zerolog/log"
 )
 
 var transport = &http.Transport{
@@ -169,12 +170,14 @@ func Grid() fiber.Handler {
 				// Make request client.Get
 				res, err := client.Do(req)
 				if err != nil {
+					log.Error().Str("postID", postID).Err(err).Msg("Failed to get image")
 					return
 				}
 				defer res.Body.Close()
 
 				images[i], err = jpeg.Decode(res.Body)
 				if err != nil {
+					log.Error().Str("postID", postID).Err(err).Msg("Failed to decode image")
 					return
 				}
 			}(i, mediaURL)
