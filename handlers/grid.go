@@ -27,7 +27,7 @@ var transport = &http.Transport{
 	ExpectContinueTimeout: 1 * time.Second,
 	DisableKeepAlives:     true,
 }
-var timeout = 10 * time.Second
+var timeout = 60 * time.Second
 
 // getHeight returns the height of the rows, imagesWH [w,h]
 func getHeight(imagesWH [][]float64, canvasWidth int) float64 {
