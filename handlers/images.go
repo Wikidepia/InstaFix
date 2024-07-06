@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	data "instafix/handlers/data"
+	scraper "instafix/handlers/scraper"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -15,7 +15,7 @@ func Images() fiber.Handler {
 		}
 
 		// Get data
-		var item data.InstaData
+		var item scraper.InstaData
 		err = item.GetData(postID)
 		if err != nil {
 			return c.SendStatus(fiber.StatusNotFound)

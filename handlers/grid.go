@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	data "instafix/handlers/data"
+	scraper "instafix/handlers/scraper"
 	"io"
 	"net"
 	"net/http"
@@ -39,7 +39,7 @@ func Grid() fiber.Handler {
 		}
 
 		// Get data
-		var item data.InstaData
+		var item scraper.InstaData
 		err := item.GetData(postID)
 		if err != nil {
 			return c.SendStatus(fiber.StatusInternalServerError)
@@ -51,7 +51,7 @@ func Grid() fiber.Handler {
 		}
 
 		// Filter media, only the first 4 image
-		mediaList := make([]data.Media, 0, 4)
+		mediaList := make([]scraper.Media, 0, 4)
 		for i, media := range item.Medias {
 			if !strings.Contains(media.TypeName, "Image") {
 				continue
@@ -75,7 +75,7 @@ func Grid() fiber.Handler {
 		for i, media := range mediaList {
 			wg.Add(1)
 
-			go func(i int, media data.Media) {
+			go func(i int, media scraper.Media) {
 				defer wg.Done()
 				req, err := http.NewRequest(http.MethodGet, media.URL, http.NoBody)
 				if err != nil {

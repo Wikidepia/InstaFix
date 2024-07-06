@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"flag"
 	"instafix/handlers"
-	data "instafix/handlers/data"
+	scraper "instafix/handlers/scraper"
 	"instafix/utils"
 	"instafix/views"
 	"io/fs"
@@ -51,7 +51,7 @@ func byteSizeStrToInt(n string) (int64, error) {
 }
 
 func init() {
-	data.InitDB()
+	scraper.InitDB()
 
 	// Create static folder if not exists
 	os.Mkdir("static", 0755)
@@ -76,14 +76,14 @@ func main() {
 	app.Use(prometheus.Middleware)
 
 	// Close database when app closes
-	defer data.DB.Close()
+	defer scraper.DB.Close()
 
 	// Initialize remote scraper
 	if *remoteScraperAddr != "" {
 		if !strings.HasPrefix(*remoteScraperAddr, "http") {
 			log.Fatal().Msg("Invalid remote scraper address")
 		}
-		data.RemoteScraperAddr = *remoteScraperAddr
+		scraper.RemoteScraperAddr = *remoteScraperAddr
 	}
 
 	// Initialize zerolog
@@ -160,14 +160,14 @@ func evictStatic(threshold int64) {
 
 // Remove cache from Pebble if already expired
 func evictCache() {
-	iter, err := data.DB.NewIter(&pebble.IterOptions{LowerBound: []byte("exp-")})
+	iter, err := scraper.DB.NewIter(&pebble.IterOptions{LowerBound: []byte("exp-")})
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create iterator when evicting cache")
 		return
 	}
 	defer iter.Close()
 
-	batch := data.DB.NewBatch()
+	batch := scraper.DB.NewBatch()
 	curTime := time.Now().UnixNano()
 	for iter.First(); iter.Valid(); iter.Next() {
 		if !bytes.HasPrefix(iter.Key(), []byte("exp-")) {

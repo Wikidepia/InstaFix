@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	data "instafix/handlers/data"
+	scraper "instafix/handlers/scraper"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -16,7 +16,7 @@ func Videos() fiber.Handler {
 		}
 
 		// Get data
-		var item data.InstaData
+		var item scraper.InstaData
 		err = item.GetData(postID)
 		if err != nil {
 			return c.SendStatus(fiber.StatusInternalServerError)

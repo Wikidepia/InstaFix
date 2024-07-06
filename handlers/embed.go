@@ -1,13 +1,12 @@
 package handlers
 
 import (
+	scraper "instafix/handlers/scraper"
 	"instafix/utils"
 	"instafix/views"
 	"net/url"
 	"strconv"
 	"strings"
-
-	data "instafix/handlers/data"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog/log"
@@ -85,7 +84,7 @@ func Embed() fiber.Handler {
 		}
 
 		// Get data
-		var item data.InstaData
+		var item scraper.InstaData
 		err = item.GetData(postID)
 		if err != nil || len(item.Medias) == 0 {
 			viewsData.Description = "Post might not be available"
