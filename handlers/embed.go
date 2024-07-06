@@ -83,9 +83,7 @@ func Embed() fiber.Handler {
 			return c.Redirect(viewsData.URL)
 		}
 
-		// Get data
-		var item scraper.InstaData
-		err = item.GetData(postID)
+		item, err := scraper.GetData(postID)
 		if err != nil || len(item.Medias) == 0 {
 			viewsData.Description = "Post might not be available"
 			views.Embed(viewsData, viewsBuf)

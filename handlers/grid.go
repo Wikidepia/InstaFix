@@ -38,9 +38,7 @@ func Grid() fiber.Handler {
 			return c.SendFile(gridFname)
 		}
 
-		// Get data
-		var item scraper.InstaData
-		err := item.GetData(postID)
+		item, err := scraper.GetData(postID)
 		if err != nil {
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}

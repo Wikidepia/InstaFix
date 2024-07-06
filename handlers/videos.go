@@ -15,9 +15,7 @@ func Videos() fiber.Handler {
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
 
-		// Get data
-		var item scraper.InstaData
-		err = item.GetData(postID)
+		item, err := scraper.GetData(postID)
 		if err != nil {
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}

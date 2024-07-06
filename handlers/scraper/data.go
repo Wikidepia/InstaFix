@@ -20,6 +20,7 @@ import (
 	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttp/fasthttpproxy"
 	"golang.org/x/net/html"
+	"golang.org/x/sync/singleflight"
 )
 
 var gjsonNil = gjson.Result{}
@@ -38,6 +39,8 @@ var (
 
 var RemoteScraperAddr string
 
+var sflightScraper singleflight.Group
+
 type Media struct {
 	TypeName string
 	URL      string
@@ -50,142 +53,114 @@ type InstaData struct {
 	Medias   []Media
 }
 
-func (i *InstaData) GetData(postID string) error {
+func GetData(postID string) (*InstaData, error) {
 	cacheInstaData, closer, err := DB.Get(utils.S2B(postID))
 	if err != nil && err != pebble.ErrNotFound {
 		log.Error().Str("postID", postID).Err(err).Msg("Failed to get data from cache")
-		return err
+		return nil, err
 	}
 
 	if len(cacheInstaData) > 0 {
+		i := &InstaData{PostID: postID}
 		err := binary.Unmarshal(cacheInstaData, i)
 		closer.Close()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		log.Debug().Str("postID", postID).Msg("Data parsed from cache")
-		return nil
+		return i, nil
 	}
 
-	// Scrape from remote scraper, if available
-	if len(RemoteScraperAddr) > 0 {
-		req, res := fasthttp.AcquireRequest(), fasthttp.AcquireResponse()
-		defer func() {
-			fasthttp.ReleaseRequest(req)
-			fasthttp.ReleaseResponse(res)
-		}()
-		req.Header.SetMethod("GET")
-		req.Header.Set("Accept-Encoding", "gzip, deflate, br")
-		req.SetRequestURI(RemoteScraperAddr + "/scrape/" + postID)
-		if err := client.DoTimeout(req, res, timeout); err == nil && res.StatusCode() == fasthttp.StatusOK {
-			iDataGunzip, _ := res.BodyGunzip()
-			if err := binary.Unmarshal(iDataGunzip, i); err == nil {
-				log.Info().Str("postID", postID).Msg("Data parsed from remote scraper")
-			}
-		}
-	} else {
-		data, err := getData(postID)
-		if err != nil {
+	ret, err, _ := sflightScraper.Do(postID, func() (interface{}, error) {
+		item := new(InstaData)
+		item.PostID = postID
+		if err := item.ScrapeData(); err != nil {
 			if err != ErrNotFound {
-				log.Error().Str("postID", postID).Err(err).Msg("Failed to get data from Instagram")
+				log.Error().Str("postID", item.PostID).Err(err).Msg("Failed to get data from Instagram")
 			} else {
-				log.Warn().Str("postID", postID).Err(err).Msg("Post not found; err getData")
+				log.Warn().Str("postID", item.PostID).Err(err).Msg("Post not found")
 			}
-			return err
+			return item, err
 		}
 
-		item := data.Get("shortcode_media")
-		if !item.Exists() {
-			item = data.Get("xdt_shortcode_media")
-			if !item.Exists() {
-				log.Error().Str("postID", postID).Msg("Failed to parse data from Instagram")
-				return ErrNotFound
+		// Replace all media urls cdn to scontent.cdninstagram.com
+		for n, media := range item.Medias {
+			u, err := url.Parse(media.URL)
+			if err != nil {
+				log.Error().Str("postID", item.PostID).Err(err).Msg("Failed to parse media URL")
+				return false, err
 			}
+			u.Host = "scontent.cdninstagram.com"
+			item.Medias[n].URL = u.String()
 		}
 
-		media := []gjson.Result{item}
-		if item.Get("edge_sidecar_to_children").Exists() {
-			media = item.Get("edge_sidecar_to_children.edges").Array()
-		}
-
-		i.PostID = postID
-
-		// Get username
-		i.Username = item.Get("owner.username").String()
-
-		// Get caption
-		i.Caption = strings.TrimSpace(item.Get("edge_media_to_caption.edges.0.node.text").String())
-
-		// Get medias
-		i.Medias = make([]Media, 0, len(media))
-		for _, m := range media {
-			if m.Get("node").Exists() {
-				m = m.Get("node")
-			}
-			mediaURL := m.Get("video_url")
-			if !mediaURL.Exists() {
-				mediaURL = m.Get("display_url")
-			}
-			i.Medias = append(i.Medias, Media{
-				TypeName: m.Get("__typename").String(),
-				URL:      mediaURL.String(),
-			})
-		}
-	}
-
-	// Replace all media urls cdn to scontent.cdninstagram.com
-	for n, media := range i.Medias {
-		u, err := url.Parse(media.URL)
+		bb, err := binary.Marshal(item)
 		if err != nil {
-			log.Error().Str("postID", postID).Err(err).Msg("Failed to parse media URL")
-			return err
+			log.Error().Str("postID", item.PostID).Err(err).Msg("Failed to marshal data")
+			return false, err
 		}
-		u.Host = "scontent.cdninstagram.com"
-		i.Medias[n].URL = u.String()
-	}
 
-	bb, err := binary.Marshal(i)
+		batch := DB.NewBatch()
+		// Write cache to DB
+		if err := batch.Set(utils.S2B(item.PostID), bb, pebble.Sync); err != nil {
+			log.Error().Str("postID", item.PostID).Err(err).Msg("Failed to save data to cache")
+			return false, err
+		}
+
+		// Write expire to DB
+		expTime := strconv.FormatInt(time.Now().Add(24*time.Hour).UnixNano(), 10)
+		if err := batch.Set(append([]byte("exp-"), expTime...), utils.S2B(item.PostID), pebble.Sync); err != nil {
+			log.Error().Str("postID", item.PostID).Err(err).Msg("Failed to save data to cache")
+			return false, err
+		}
+
+		// Commit batch
+		if err := batch.Commit(pebble.Sync); err != nil {
+			log.Error().Str("postID", item.PostID).Err(err).Msg("Failed to commit batch")
+			return false, err
+		}
+		return item, nil
+	})
 	if err != nil {
-		log.Error().Str("postID", postID).Err(err).Msg("Failed to marshal data")
-		return err
+		return nil, err
 	}
-
-	batch := DB.NewBatch()
-	// Write cache to DB
-	if err := batch.Set(utils.S2B(postID), bb, pebble.Sync); err != nil {
-		log.Error().Str("postID", postID).Err(err).Msg("Failed to save data to cache")
-		return err
-	}
-
-	// Write expire to DB
-	expTime := strconv.FormatInt(time.Now().Add(24*time.Hour).UnixNano(), 10)
-	if err := batch.Set(append([]byte("exp-"), expTime...), utils.S2B(postID), pebble.Sync); err != nil {
-		log.Error().Str("postID", postID).Err(err).Msg("Failed to save data to cache")
-		return err
-	}
-
-	// Commit batch
-	if err := batch.Commit(pebble.Sync); err != nil {
-		log.Error().Str("postID", postID).Err(err).Msg("Failed to commit batch")
-		return err
-	}
-	return nil
+	return ret.(*InstaData), nil
 }
 
-func getData(postID string) (gjson.Result, error) {
+func (i *InstaData) ScrapeData() error {
+	var gqlData gjson.Result
+
 	req, res := fasthttp.AcquireRequest(), fasthttp.AcquireResponse()
 	defer func() {
 		fasthttp.ReleaseRequest(req)
 		fasthttp.ReleaseResponse(res)
 	}()
 
+	// Scrape from remote scraper if available
+	if len(RemoteScraperAddr) > 0 {
+		req.Header.SetMethod("GET")
+		req.Header.Set("Accept-Encoding", "gzip, deflate, br")
+		req.SetRequestURI(RemoteScraperAddr + "/scrape/" + i.PostID)
+		if err := client.DoTimeout(req, res, timeout); err == nil && res.StatusCode() == fasthttp.StatusOK {
+			iDataGunzip, _ := res.BodyGunzip()
+			if err := binary.Unmarshal(iDataGunzip, i); err == nil {
+				log.Info().Str("postID", i.PostID).Msg("Data parsed from remote scraper")
+				return nil
+			}
+		}
+	}
+
+	req.Reset()
+	res.Reset()
+
+	// Embed scraper
 	req.Header.SetMethod("GET")
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
 	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
 	req.Header.Set("Connection", "close")
 	req.Header.Set("Sec-Fetch-Mode", "navigate")
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36")
-	req.SetRequestURI("https://www.instagram.com/p/" + postID + "/embed/captioned/")
+	req.SetRequestURI("https://www.instagram.com/p/" + i.PostID + "/embed/captioned/")
 
 	var err error
 	for retries := 0; retries < 3; retries++ {
@@ -217,21 +192,21 @@ func getData(postID string) (gjson.Result, error) {
 				text = text[1 : len(text)-1]
 				unescapeData := utils.UnescapeJSONString(utils.B2S(text))
 				if !gjson.Valid(unescapeData) {
-					log.Error().Str("postID", postID).Err(err).Msg("Failed to parse data from TimeSliceImpl")
-					return gjsonNil, err
+					log.Error().Str("postID", i.PostID).Err(err).Msg("Failed to parse data from TimeSliceImpl")
+					return err
 				}
 				timeSlice := gjson.Parse(unescapeData)
-				log.Info().Str("postID", postID).Msg("Data parsed from TimeSliceImpl")
-				return timeSlice.Get("gql_data"), nil
+				log.Info().Str("postID", i.PostID).Msg("Data parsed from TimeSliceImpl")
+				gqlData = timeSlice.Get("gql_data")
 			}
 		}
 	}
 
-	// Parse embed HTML
-	embedHTML, err := parseEmbedHTML(res.Body())
+	// Scrape from embed HTML
+	embedHTML, err := scrapeFromEmbedHTML(res.Body())
 	if err != nil {
-		log.Error().Str("postID", postID).Err(err).Msg("Failed to parse data from ParseEmbedHTML")
-		return gjsonNil, err
+		log.Error().Str("postID", i.PostID).Err(err).Msg("Failed to parse data from scrapeFromEmbedHTML")
+		return err
 	}
 
 	embedHTMLData := gjson.Parse(embedHTML)
@@ -242,25 +217,59 @@ func getData(postID string) (gjson.Result, error) {
 
 	// Scrape from GraphQL API
 	if videoBlocked || len(username) == 0 {
-		gqlValue, err := parseGQLData(postID, req, res)
+		gqlValue, err := scrapeFromGQL(i.PostID, req, res)
 		if err != nil {
-			log.Error().Str("postID", postID).Err(err).Msg("Failed to parse data from parseGQLData")
-			return gjsonNil, err
+			log.Error().Str("postID", i.PostID).Err(err).Msg("Failed to scrape data from scrapeFromGQL")
+			return err
 		}
 		gqlData := gjson.Parse(utils.B2S(gqlValue))
 		if gqlData.Get("data").Exists() {
-			log.Info().Str("postID", postID).Msg("Data parsed from parseGQLData")
-			return gqlData.Get("data"), nil
+			log.Info().Str("postID", i.PostID).Msg("Data scraped from scrapeFromGQL")
+			gqlData = gqlData.Get("data")
 		}
+	}
+
+	item := gqlData.Get("shortcode_media")
+	if !item.Exists() {
+		item = gqlData.Get("xdt_shortcode_media")
+		if !item.Exists() {
+			log.Error().Str("postID", i.PostID).Msg("Failed to parse data from Instagram")
+			return ErrNotFound
+		}
+	}
+
+	media := []gjson.Result{item}
+	if item.Get("edge_sidecar_to_children").Exists() {
+		media = item.Get("edge_sidecar_to_children.edges").Array()
+	}
+
+	// Get username
+	i.Username = item.Get("owner.username").String()
+
+	// Get caption
+	i.Caption = strings.TrimSpace(item.Get("edge_media_to_caption.edges.0.node.text").String())
+
+	// Get medias
+	i.Medias = make([]Media, 0, len(media))
+	for _, m := range media {
+		if m.Get("node").Exists() {
+			m = m.Get("node")
+		}
+		mediaURL := m.Get("video_url")
+		if !mediaURL.Exists() {
+			mediaURL = m.Get("display_url")
+		}
+		i.Medias = append(i.Medias, Media{
+			TypeName: m.Get("__typename").String(),
+			URL:      mediaURL.String(),
+		})
 	}
 
 	// Failed to scrape from Embed
 	if len(username) == 0 {
-		return gjsonNil, ErrNotFound
+		return ErrNotFound
 	}
-
-	log.Info().Str("postID", postID).Msg("Data parsed from ParseEmbedHTML")
-	return embedHTMLData, nil
+	return nil
 }
 
 // Taken from https://github.com/PuerkitoBio/goquery
@@ -288,7 +297,7 @@ func gqTextNewLine(s *goquery.Selection) string {
 	return sb.String()
 }
 
-func parseEmbedHTML(embedHTML []byte) (string, error) {
+func scrapeFromEmbedHTML(embedHTML []byte) (string, error) {
 	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(embedHTML))
 	if err != nil {
 		return "", err
@@ -332,7 +341,7 @@ func parseEmbedHTML(embedHTML []byte) (string, error) {
 	}`, nil
 }
 
-func parseGQLData(postID string, req *fasthttp.Request, res *fasthttp.Response) ([]byte, error) {
+func scrapeFromGQL(postID string, req *fasthttp.Request, res *fasthttp.Response) ([]byte, error) {
 	req.Reset()
 	res.Reset()
 
