@@ -138,7 +138,7 @@ func Grid() fiber.Handler {
 
 		item, err := scraper.GetData(postID)
 		if err != nil {
-			return c.SendStatus(fiber.StatusInternalServerError)
+			return err
 		}
 
 		if len(item.Medias) == 1 {

@@ -11,17 +11,17 @@ func Images() fiber.Handler {
 		postID := c.Params("postID")
 		mediaNum, err := c.ParamsInt("mediaNum", 1)
 		if err != nil {
-			return c.SendStatus(fiber.StatusNotFound)
+			return err
 		}
 
 		item, err := scraper.GetData(postID)
 		if err != nil {
-			return c.SendStatus(fiber.StatusNotFound)
+			return err
 		}
 
 		// Redirect to image URL
 		if mediaNum > len(item.Medias) {
-			return c.SendStatus(fiber.StatusNotFound)
+			return err
 		}
 		imageURL := item.Medias[max(1, mediaNum)-1].URL
 		return c.Redirect(imageURL, fiber.StatusFound)

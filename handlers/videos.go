@@ -12,17 +12,17 @@ func Videos() fiber.Handler {
 		postID := c.Params("postID")
 		mediaNum, err := c.ParamsInt("mediaNum", 1)
 		if err != nil {
-			return c.SendStatus(fiber.StatusInternalServerError)
+			return err
 		}
 
 		item, err := scraper.GetData(postID)
 		if err != nil {
-			return c.SendStatus(fiber.StatusInternalServerError)
+			return err
 		}
 
 		// Redirect to image URL
 		if mediaNum > len(item.Medias) {
-			return c.SendStatus(fiber.StatusNotFound)
+			return err
 		}
 		videoURL := item.Medias[max(1, mediaNum)-1].URL
 
