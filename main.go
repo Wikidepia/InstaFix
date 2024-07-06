@@ -60,7 +60,7 @@ func main() {
 
 	// Initialize zerolog
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	zerolog.SetGlobalLevel(zerolog.ErrorLevel)
 
 	// Initialize LRU
 	gridCacheMax, err := strconv.Atoi(*gridCacheMaxFlag)
