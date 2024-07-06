@@ -10,7 +10,9 @@ require (
 	github.com/RyanCarrier/dijkstra/v2 v2.0.2
 	github.com/ansrivas/fiberprometheus/v2 v2.6.1
 	github.com/bamiaux/rez v0.0.0-20170731184118-29f4463c688b
+	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/cockroachdb/pebble v1.1.1
+	github.com/elastic/go-freelru v0.13.0
 	github.com/gofiber/fiber/v2 v2.52.4
 	github.com/kelindar/binary v1.0.19
 	github.com/rs/zerolog v1.33.0
@@ -27,7 +29,6 @@ require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/andybalholm/cascadia v1.3.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cockroachdb/errors v1.11.3 // indirect
 	github.com/cockroachdb/fifo v0.0.0-20240616162244-4768e80dfb9a // indirect
 	github.com/cockroachdb/logtags v0.0.0-20230118201751-21c54148d20b // indirect

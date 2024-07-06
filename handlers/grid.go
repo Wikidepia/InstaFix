@@ -131,7 +131,7 @@ func Grid() fiber.Handler {
 		gridFname := filepath.Join("static", postID+".jpeg")
 
 		// If already exists, return
-		if _, err := os.Stat(gridFname); err == nil {
+		if _, ok := scraper.LRU.Get(gridFname); ok {
 			return c.SendFile(gridFname)
 		}
 
@@ -197,6 +197,7 @@ func Grid() fiber.Handler {
 		if err := jpeg.Encode(f, grid, &jpeg.Options{Quality: 80}); err != nil {
 			return err
 		}
+		scraper.LRU.Add(gridFname, true)
 		return c.SendFile(gridFname)
 	}
 }

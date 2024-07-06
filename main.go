@@ -7,9 +7,7 @@ import (
 	scraper "instafix/handlers/scraper"
 	"instafix/utils"
 	"instafix/views"
-	"io/fs"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -24,32 +22,6 @@ import (
 	"github.com/valyala/bytebufferpool"
 )
 
-func byteSizeStrToInt(n string) (int64, error) {
-	sizeStr := strings.ToLower(n)
-	sizeStr = strings.TrimSpace(sizeStr)
-
-	units := map[string]int64{
-		"kb": 1024,
-		"mb": 1024 * 1024,
-		"gb": 1024 * 1024 * 1024,
-		"tb": 1024 * 1024 * 1024 * 1024,
-	}
-
-	for unit, multiplier := range units {
-		if strings.HasSuffix(sizeStr, unit) {
-			sizeStr = strings.TrimSuffix(sizeStr, unit)
-			sizeStr = strings.TrimSpace(sizeStr)
-
-			size, err := strconv.ParseInt(sizeStr, 10, 64)
-			if err != nil {
-				return -1, err
-			}
-			return size * multiplier, nil
-		}
-	}
-	return -1, nil
-}
-
 func init() {
 	scraper.InitDB()
 
@@ -59,7 +31,7 @@ func init() {
 
 func main() {
 	listenAddr := flag.String("listen", "0.0.0.0:3000", "Address to listen on")
-	gridCacheSize := flag.String("grid-cache-size", "25GB", "Grid cache size")
+	gridCacheMaxFlag := flag.String("grid-cache-entries", "1024", "Maximum number of grid images to cache")
 	remoteScraperAddr := flag.String("remote-scraper", "", "Remote scraper address")
 	flag.Parse()
 
@@ -90,18 +62,18 @@ func main() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 
-	// Parse grid-cache-size
-	gridCacheSizeParsed, err := byteSizeStrToInt(*gridCacheSize)
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to parse grid-cache-size")
+	// Initialize LRU
+	gridCacheMax, err := strconv.Atoi(*gridCacheMaxFlag)
+	if err != nil || gridCacheMax <= 0 {
+		log.Fatal().Err(err).Msg("Failed to parse grid-cache-entries or invalid value")
 	}
+	scraper.InitLRU(gridCacheMax)
 
 	// Evict cache every minute
 	go func() {
 		for {
-			time.Sleep(5 * time.Minute)
-			evictStatic(gridCacheSizeParsed)
 			evictCache()
+			time.Sleep(5 * time.Minute)
 		}
 	}()
 
@@ -113,8 +85,6 @@ func main() {
 		return c.Send(viewsBuf.Bytes())
 	})
 
-	// GET /p/Cw8X2wXPjiM
-	// GET /stories/fatfatpankocat/3226148677671954631/
 	app.Get("/p/:postID/", handlers.Embed())
 	app.Get("/tv/:postID", handlers.Embed())
 	app.Get("/reel/:postID", handlers.Embed())
@@ -133,29 +103,6 @@ func main() {
 	if err := app.Listen(*listenAddr); err != nil {
 		log.Fatal().Err(err).Msg("Failed to listen")
 	}
-}
-
-// Remove file in static folder until below threshold
-func evictStatic(threshold int64) {
-	var dirSize int64 = 0
-	readSize := func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if !d.IsDir() {
-			if dirSize > threshold {
-				err := os.Remove(path)
-				return err
-			}
-			info, err := d.Info()
-			if err != nil {
-				return err
-			}
-			dirSize += info.Size()
-		}
-		return nil
-	}
-	filepath.WalkDir("static", readSize)
 }
 
 // Remove cache from Pebble if already expired
