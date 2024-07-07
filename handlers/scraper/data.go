@@ -46,6 +46,10 @@ type InstaData struct {
 }
 
 func GetData(postID string) (*InstaData, error) {
+	if postID[0] != 'C' {
+		return nil, errors.New("postID is not a valid Instagram post ID")
+	}
+
 	cacheInstaData, closer, err := DB.Get(utils.S2B(postID))
 	if err != nil && err != pebble.ErrNotFound {
 		log.Error().Str("postID", postID).Err(err).Msg("Failed to get data from cache")
