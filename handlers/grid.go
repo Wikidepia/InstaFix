@@ -107,7 +107,7 @@ func GenerateGrid(images []image.Image) (image.Image, error) {
 		canvasHeight += rowHeight
 	}
 
-	canvas := image.NewNRGBA(image.Rect(0, 0, canvasWidth, canvasHeight))
+	canvas := image.NewRGBA(image.Rect(0, 0, canvasWidth, canvasHeight))
 
 	oldRowHeight := 0
 	for i := 1; i < len(path); i++ {
