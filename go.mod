@@ -9,7 +9,6 @@ require (
 	github.com/PurpleSec/escape v1.0.0
 	github.com/RyanCarrier/dijkstra/v2 v2.0.2
 	github.com/ansrivas/fiberprometheus/v2 v2.6.1
-	github.com/bamiaux/rez v0.0.0-20170731184118-29f4463c688b
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/cockroachdb/pebble v1.1.1
 	github.com/elastic/go-freelru v0.13.0
@@ -20,6 +19,7 @@ require (
 	github.com/tidwall/gjson v1.17.1
 	github.com/valyala/bytebufferpool v1.0.0
 	github.com/valyala/fasthttp v1.55.0
+	golang.org/x/image v0.18.0
 	golang.org/x/net v0.26.0
 	golang.org/x/sync v0.7.0
 )
