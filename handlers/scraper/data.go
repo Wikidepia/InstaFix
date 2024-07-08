@@ -23,8 +23,6 @@ import (
 	"golang.org/x/sync/singleflight"
 )
 
-var gjsonNil = gjson.Result{}
-
 var client = &fasthttp.Client{
 	Dial:               fasthttpproxy.FasthttpProxyHTTPDialerTimeout(5 * time.Second),
 	ReadBufferSize:     16 * 1024,
@@ -79,12 +77,8 @@ func GetData(postID string) (*InstaData, error) {
 		item := new(InstaData)
 		item.PostID = postID
 		if err := item.ScrapeData(); err != nil {
-			if err != ErrNotFound {
-				log.Error().Str("postID", item.PostID).Err(err).Msg("Failed to get data from Instagram")
-			} else {
-				log.Warn().Str("postID", item.PostID).Err(err).Msg("Post not found")
-			}
-			return item, err
+			log.Error().Str("postID", item.PostID).Err(err).Msg("Failed to scrape data from Instagram")
+			return nil, err
 		}
 
 		// Replace all media urls cdn to scontent.cdninstagram.com
@@ -152,6 +146,7 @@ func (i *InstaData) ScrapeData() error {
 				return nil
 			}
 		}
+		log.Warn().Str("postID", i.PostID).Msg("Failed to scrape data from remote scraper")
 	}
 
 	req.Reset()
@@ -227,18 +222,26 @@ func (i *InstaData) ScrapeData() error {
 			return err
 		}
 		gqlData := gjson.Parse(utils.B2S(gqlValue))
+		// Need to show embeds even if the video is blocked
+		if gqlData.Get("require_login").Bool() && !videoBlocked {
+			return errors.New("scrapeFromGQL is blocked")
+		}
 		if gqlData.Get("data").Exists() {
 			log.Info().Str("postID", i.PostID).Msg("Data scraped from scrapeFromGQL")
 			gqlData = gqlData.Get("data")
 		}
 	}
 
+	status := gqlData.Get("status").String()
 	item := gqlData.Get("shortcode_media")
 	if !item.Exists() {
 		item = gqlData.Get("xdt_shortcode_media")
 		if !item.Exists() {
-			log.Error().Str("postID", i.PostID).Msg("Failed to parse data from Instagram")
-			return ErrNotFound
+			if status == "ok" {
+				return ErrNotFound
+			} else if status == "fail" {
+				return errors.New("scrapeFromGQL is blocked")
+			}
 		}
 	}
 
