@@ -59,7 +59,6 @@ func main() {
 	}
 
 	// Initialize zerolog
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	zerolog.SetGlobalLevel(zerolog.ErrorLevel)
 
 	// Initialize LRU
