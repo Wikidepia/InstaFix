@@ -14,7 +14,6 @@ require (
 	github.com/elastic/go-freelru v0.13.0
 	github.com/gofiber/fiber/v2 v2.52.4
 	github.com/kelindar/binary v1.0.19
-	github.com/klauspost/compress v1.17.9
 	github.com/rs/zerolog v1.33.0
 	github.com/tdewolff/parse/v2 v2.7.15
 	github.com/tidwall/gjson v1.17.1
@@ -40,6 +39,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
