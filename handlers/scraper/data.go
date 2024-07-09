@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	_ "embed"
 	"errors"
 	"instafix/utils"
 	"net/url"
@@ -13,6 +14,7 @@ import (
 	"github.com/PurpleSec/escape"
 	"github.com/cockroachdb/pebble"
 	"github.com/kelindar/binary"
+	"github.com/klauspost/compress/zstd"
 	"github.com/rs/zerolog/log"
 	"github.com/tdewolff/parse/v2"
 	"github.com/tdewolff/parse/v2/js"
@@ -38,6 +40,9 @@ var (
 var RemoteScraperAddr string
 
 var sflightScraper singleflight.Group
+
+//go:embed zstd.dict
+var zstdDict []byte
 
 type Media struct {
 	TypeName string
@@ -141,9 +146,12 @@ func (i *InstaData) ScrapeData() error {
 		req.Header.Set("Accept-Encoding", "gzip, deflate, br")
 		req.SetRequestURI(RemoteScraperAddr + "/scrape/" + i.PostID)
 		if err = client.DoTimeout(req, res, timeout); err == nil && res.StatusCode() == fasthttp.StatusOK {
-			iDataGunzip, err := res.BodyGunzip()
+			// Remote scraper is compressed with zstd+dict
+			decData := make([]byte, 0, 1024)
+			dec, _ := zstd.NewReader(nil, zstd.WithDecoderDicts(zstdDict))
+			decData, err = dec.DecodeAll(res.Body(), nil)
 			if err == nil {
-				if err = binary.Unmarshal(iDataGunzip, i); err == nil {
+				if err = binary.Unmarshal(decData, i); err == nil {
 					log.Info().Str("postID", i.PostID).Msg("Data parsed from remote scraper")
 					return nil
 				}
