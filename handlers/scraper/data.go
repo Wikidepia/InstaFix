@@ -136,17 +136,20 @@ func (i *InstaData) ScrapeData() error {
 
 	// Scrape from remote scraper if available
 	if len(RemoteScraperAddr) > 0 {
+		var err error
 		req.Header.SetMethod("GET")
 		req.Header.Set("Accept-Encoding", "gzip, deflate, br")
 		req.SetRequestURI(RemoteScraperAddr + "/scrape/" + i.PostID)
-		if err := client.DoTimeout(req, res, timeout); err == nil && res.StatusCode() == fasthttp.StatusOK {
-			iDataGunzip, _ := res.BodyGunzip()
-			if err := binary.Unmarshal(iDataGunzip, i); err == nil {
-				log.Info().Str("postID", i.PostID).Msg("Data parsed from remote scraper")
-				return nil
+		if err = client.DoTimeout(req, res, timeout); err == nil && res.StatusCode() == fasthttp.StatusOK {
+			iDataGunzip, err := res.BodyGunzip()
+			if err == nil {
+				if err = binary.Unmarshal(iDataGunzip, i); err == nil {
+					log.Info().Str("postID", i.PostID).Msg("Data parsed from remote scraper")
+					return nil
+				}
 			}
 		}
-		log.Warn().Str("postID", i.PostID).Msg("Failed to scrape data from remote scraper")
+		log.Error().Err(err).Str("postID", i.PostID).Msg("Failed to scrape data from remote scraper")
 	}
 
 	req.Reset()
