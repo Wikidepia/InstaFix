@@ -149,7 +149,7 @@ func (i *InstaData) ScrapeData() error {
 				}
 			}
 		}
-		log.Error().Str("postID", i.PostID).Err(err).Msg("Failed to scrape data from remote scraper")
+		log.Error().Str("postID", i.PostID).Int("status", res.StatusCode()).Err(err).Msg("Failed to scrape data from remote scraper")
 	}
 
 	req.Reset()
