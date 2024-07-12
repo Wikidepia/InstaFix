@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ansrivas/fiberprometheus/v2"
 	"github.com/cockroachdb/pebble"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/pprof"
@@ -41,11 +40,6 @@ func main() {
 	recoverConfig.EnableStackTrace = true
 	app.Use(recover.New(recoverConfig))
 	app.Use(pprof.New())
-
-	// Initialize Prometheus
-	prometheus := fiberprometheus.New("InstaFix")
-	prometheus.RegisterAt(app, "/metrics")
-	app.Use(prometheus.Middleware)
 
 	// Close database when app closes
 	defer scraper.DB.Close()

@@ -8,7 +8,6 @@ require (
 	github.com/PuerkitoBio/goquery v1.9.2
 	github.com/PurpleSec/escape v1.0.0
 	github.com/RyanCarrier/dijkstra/v2 v2.0.2
-	github.com/ansrivas/fiberprometheus/v2 v2.6.1
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/cockroachdb/pebble v1.1.1
 	github.com/elastic/go-freelru v0.13.0
@@ -35,7 +34,6 @@ require (
 	github.com/cockroachdb/redact v1.1.5 // indirect
 	github.com/cockroachdb/tokenbucket v0.0.0-20230807174530-cc333fc44b06 // indirect
 	github.com/getsentry/sentry-go v0.28.1 // indirect
-	github.com/gofiber/adaptor/v2 v2.2.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -60,5 +58,3 @@ require (
 	golang.org/x/text v0.16.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
 )
-
-replace github.com/bamiaux/rez => github.com/Wikidepia/rez v0.0.0-20240703041142-134b08cf4125
