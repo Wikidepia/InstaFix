@@ -3,7 +3,7 @@
 package views
 
 import (
-	pool "github.com/valyala/bytebufferpool"
+	"io"
 )
 
 const (
@@ -11,7 +11,8 @@ const (
 	home__1 = `</li></ul></header><video src="https://user-images.githubusercontent.com/72781956/168544556-31009b0e-62e8-4d4c-909b-434ad146e118.mp4" controls="controls" muted="muted" style="width: 100%; max-height: 100%">Your browser does not support the video tag.</video><hr/><small><a href="https://github.com/Wikidepia/InstaFix" target="_blank">Source code available in GitHub!</a></small><br/><small>• Instagram is a trademark of Instagram, Inc. This app is not affiliated with Instagram, Inc.</small></section></main></body></html>`
 )
 
-func Home(buffer *pool.ByteBuffer) {
+func Home(wr io.Writer) {
+	buffer := &WriterAsBuffer{wr}
 
 	buffer.WriteString(home__0)
 

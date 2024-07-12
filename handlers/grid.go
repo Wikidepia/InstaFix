@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/jpeg"
 	scraper "instafix/handlers/scraper"
+	"io"
 	"math"
 	"net"
 	"net/http"
@@ -14,7 +15,7 @@ import (
 	"time"
 
 	"github.com/RyanCarrier/dijkstra/v2"
-	"github.com/gofiber/fiber/v2"
+	"github.com/julienschmidt/httprouter"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/image/draw"
 )
@@ -124,81 +125,94 @@ func GenerateGrid(images []image.Image) (image.Image, error) {
 	return canvas, nil
 }
 
-func Grid() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		postID := c.Params("postID")
-		gridFname := filepath.Join("static", postID+".jpeg")
+func Grid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	postID := ps.ByName("postID")
+	gridFname := filepath.Join("static", postID+".jpeg")
 
-		// If already exists, return
-		if _, ok := scraper.LRU.Get(gridFname); ok {
-			return c.SendFile(gridFname)
-		}
-
-		item, err := scraper.GetData(postID)
+	// If already exists, return
+	if _, ok := scraper.LRU.Get(gridFname); ok {
+		f, err := os.Open(gridFname)
 		if err != nil {
-			return err
-		}
-
-		// Filter media only include image
-		var mediaURLs []string
-		for _, media := range item.Medias {
-			if !strings.Contains(media.TypeName, "Image") {
-				continue
-			}
-			mediaURLs = append(mediaURLs, media.URL)
-		}
-
-		if len(item.Medias) == 1 || len(mediaURLs) == 1 {
-			return c.Redirect("/images/" + postID + "/1")
-		}
-
-		var wg sync.WaitGroup
-		images := make([]image.Image, len(mediaURLs))
-		client := http.Client{Transport: transport, Timeout: timeout}
-		for i, mediaURL := range mediaURLs {
-			wg.Add(1)
-
-			go func(i int, url string) {
-				defer wg.Done()
-				req, err := http.NewRequest(http.MethodGet, url, http.NoBody)
-				if err != nil {
-					return
-				}
-
-				// Make request client.Get
-				res, err := client.Do(req)
-				if err != nil {
-					log.Error().Str("postID", postID).Err(err).Msg("Failed to get image")
-					return
-				}
-				defer res.Body.Close()
-
-				images[i], err = jpeg.Decode(res.Body)
-				if err != nil {
-					log.Error().Str("postID", postID).Err(err).Msg("Failed to decode image")
-					return
-				}
-			}(i, mediaURL)
-		}
-		wg.Wait()
-
-		// Create grid Images
-		grid, err := GenerateGrid(images)
-		if err != nil {
-			return err
-		}
-
-		// Write grid to static folder
-		f, err := os.Create(gridFname)
-		if err != nil {
-			return err
+			return
 		}
 		defer f.Close()
-
-		if err := jpeg.Encode(f, grid, &jpeg.Options{Quality: 80}); err != nil {
-			return err
-		}
-		scraper.LRU.Add(gridFname, true)
-		return c.SendFile(gridFname)
+		w.Header().Set("Content-Type", "image/jpeg")
+		io.Copy(w, f)
+		return
 	}
+
+	item, err := scraper.GetData(postID)
+	if err != nil {
+		return
+	}
+
+	// Filter media only include image
+	var mediaURLs []string
+	for _, media := range item.Medias {
+		if !strings.Contains(media.TypeName, "Image") {
+			continue
+		}
+		mediaURLs = append(mediaURLs, media.URL)
+	}
+
+	if len(item.Medias) == 1 || len(mediaURLs) == 1 {
+		w.Header().Set("Location", "/images/"+postID+"/1")
+		return
+	}
+
+	var wg sync.WaitGroup
+	images := make([]image.Image, len(mediaURLs))
+	client := http.Client{Transport: transport, Timeout: timeout}
+	for i, mediaURL := range mediaURLs {
+		wg.Add(1)
+
+		go func(i int, url string) {
+			defer wg.Done()
+			req, err := http.NewRequest(http.MethodGet, url, http.NoBody)
+			if err != nil {
+				return
+			}
+
+			// Make request client.Get
+			res, err := client.Do(req)
+			if err != nil {
+				log.Error().Str("postID", postID).Err(err).Msg("Failed to get image")
+				return
+			}
+			defer res.Body.Close()
+
+			images[i], err = jpeg.Decode(res.Body)
+			if err != nil {
+				log.Error().Str("postID", postID).Err(err).Msg("Failed to decode image")
+				return
+			}
+		}(i, mediaURL)
+	}
+	wg.Wait()
+
+	// Create grid Images
+	grid, err := GenerateGrid(images)
+	if err != nil {
+		return
+	}
+
+	// Write grid to static folder
+	f, err := os.Create(gridFname)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+
+	if err := jpeg.Encode(f, grid, &jpeg.Options{Quality: 80}); err != nil {
+		return
+	}
+	scraper.LRU.Add(gridFname, true)
+	f, err = os.Open(gridFname)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	w.Header().Set("Content-Type", "image/jpeg")
+	io.Copy(w, f)
+	return
 }
