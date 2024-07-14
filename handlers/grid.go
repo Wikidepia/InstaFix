@@ -155,6 +155,7 @@ func Grid() fiber.Handler {
 		var wg sync.WaitGroup
 		images := make([]image.Image, len(mediaURLs))
 		client := http.Client{Transport: transport, Timeout: timeout}
+		defer client.CloseIdleConnections()
 		for i, mediaURL := range mediaURLs {
 			wg.Add(1)
 
