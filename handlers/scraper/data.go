@@ -123,6 +123,7 @@ func (i *InstaData) ScrapeData() error {
 	var gqlData gjson.Result
 
 	client := http.Client{Timeout: timeout}
+	defer client.CloseIdleConnections()
 
 	// Scrape from remote scraper if available
 	if len(RemoteScraperAddr) > 0 {
@@ -131,7 +132,6 @@ func (i *InstaData) ScrapeData() error {
 		if err != nil {
 			return err
 		}
-		req.Header.Set("Accept-Encoding", "gzip, deflate, br")
 		if res, err := client.Do(req); err == nil {
 			defer res.Body.Close()
 			iDataGunzip, err := io.ReadAll(res.Body)
@@ -269,6 +269,7 @@ func (i *InstaData) ScrapeData() error {
 	if len(username) == 0 {
 		return ErrNotFound
 	}
+	log.Info().Str("postID", i.PostID).Msg("Data scraped from embedHTML")
 	return nil
 }
 
