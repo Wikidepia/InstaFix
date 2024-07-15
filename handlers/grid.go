@@ -16,9 +16,11 @@ import (
 	"github.com/RyanCarrier/dijkstra/v2"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/image/draw"
+	"golang.org/x/sync/singleflight"
 )
 
 var timeout = 60 * time.Second
+var sflightGrid singleflight.Group
 
 // getHeight returns the height of the rows, imagesWH [w,h]
 func getHeight(imagesWH [][]float64, canvasWidth int) float64 {
@@ -149,54 +151,62 @@ func Grid(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var wg sync.WaitGroup
-	images := make([]image.Image, len(mediaURLs))
-	for i, mediaURL := range mediaURLs {
-		wg.Add(1)
+	_, err, _ = sflightGrid.Do(postID, func() (interface{}, error) {
+		var wg sync.WaitGroup
+		images := make([]image.Image, len(mediaURLs))
+		for i, mediaURL := range mediaURLs {
+			wg.Add(1)
 
-		go func(i int, url string) {
-			defer wg.Done()
-			client := http.Client{Timeout: timeout}
-			req, err := http.NewRequest(http.MethodGet, url, http.NoBody)
-			if err != nil {
-				return
-			}
+			go func(i int, url string) {
+				defer wg.Done()
+				client := http.Client{Timeout: timeout}
+				req, err := http.NewRequest(http.MethodGet, url, http.NoBody)
+				if err != nil {
+					return
+				}
 
-			// Make request client.Get
-			res, err := client.Do(req)
-			if err != nil {
-				log.Error().Str("postID", postID).Err(err).Msg("Failed to get image")
-				return
-			}
-			defer res.Body.Close()
+				// Make request client.Get
+				res, err := client.Do(req)
+				if err != nil {
+					log.Error().Str("postID", postID).Err(err).Msg("Failed to get image")
+					return
+				}
+				defer res.Body.Close()
 
-			images[i], err = jpeg.Decode(res.Body)
-			if err != nil {
-				log.Error().Str("postID", postID).Err(err).Msg("Failed to decode image")
-				return
-			}
-		}(i, mediaURL)
-	}
-	wg.Wait()
+				images[i], err = jpeg.Decode(res.Body)
+				if err != nil {
+					log.Error().Str("postID", postID).Err(err).Msg("Failed to decode image")
+					return
+				}
+			}(i, mediaURL)
+		}
+		wg.Wait()
 
-	// Create grid Images
-	grid, err := GenerateGrid(images)
+		// Create grid Images
+		grid, err := GenerateGrid(images)
+		if err != nil {
+			return false, err
+		}
+
+		// Write grid to static folder
+		f, err := os.Create(gridFname)
+		if err != nil {
+			return false, err
+		}
+		defer f.Close()
+
+		if err := jpeg.Encode(f, grid, &jpeg.Options{Quality: 80}); err != nil {
+			return false, err
+		}
+		scraper.LRU.Add(gridFname, true)
+		return true, nil
+	})
+
 	if err != nil {
 		return
 	}
 
-	// Write grid to static folder
-	f, err := os.Create(gridFname)
-	if err != nil {
-		return
-	}
-	defer f.Close()
-
-	if err := jpeg.Encode(f, grid, &jpeg.Options{Quality: 80}); err != nil {
-		return
-	}
-	scraper.LRU.Add(gridFname, true)
-	f, err = os.Open(gridFname)
+	f, err := os.Open(gridFname)
 	if err != nil {
 		return
 	}
