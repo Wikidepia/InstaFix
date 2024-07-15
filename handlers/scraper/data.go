@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"instafix/utils"
+	"io"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -17,18 +19,10 @@ import (
 	"github.com/tdewolff/parse/v2"
 	"github.com/tdewolff/parse/v2/js"
 	"github.com/tidwall/gjson"
-	"github.com/valyala/fasthttp"
-	"github.com/valyala/fasthttp/fasthttpproxy"
 	"golang.org/x/net/html"
 	"golang.org/x/sync/singleflight"
 )
 
-var client = &fasthttp.Client{
-	Dial:               fasthttpproxy.FasthttpProxyHTTPDialerTimeout(5 * time.Second),
-	ReadBufferSize:     16 * 1024,
-	MaxConnsPerHost:    1024,
-	MaxConnWaitTimeout: 5 * time.Second,
-}
 var timeout = 10 * time.Second
 
 var (
@@ -128,48 +122,56 @@ func GetData(postID string) (*InstaData, error) {
 func (i *InstaData) ScrapeData() error {
 	var gqlData gjson.Result
 
-	req, res := fasthttp.AcquireRequest(), fasthttp.AcquireResponse()
-	defer func() {
-		fasthttp.ReleaseRequest(req)
-		fasthttp.ReleaseResponse(res)
-	}()
+	client := http.Client{Timeout: timeout}
 
 	// Scrape from remote scraper if available
 	if len(RemoteScraperAddr) > 0 {
 		var err error
-		req.Header.SetMethod("GET")
+		req, err := http.NewRequest("GET", RemoteScraperAddr+"/scrape/"+i.PostID, nil)
+		if err != nil {
+			return err
+		}
 		req.Header.Set("Accept-Encoding", "gzip, deflate, br")
-		req.SetRequestURI(RemoteScraperAddr + "/scrape/" + i.PostID)
-		if err = client.DoTimeout(req, res, timeout); err == nil && res.StatusCode() == fasthttp.StatusOK {
-			iDataGunzip, err := res.BodyGunzip()
+		if res, err := client.Do(req); err == nil {
+			defer res.Body.Close()
+			iDataGunzip, err := io.ReadAll(req.Body)
 			if err == nil {
 				if err = binary.Unmarshal(iDataGunzip, i); err == nil {
 					log.Info().Str("postID", i.PostID).Msg("Data parsed from remote scraper")
 					return nil
 				}
 			}
+			log.Error().Str("postID", i.PostID).Int("status", res.StatusCode).Err(err).Msg("Failed to scrape data from remote scraper")
 		}
-		log.Error().Str("postID", i.PostID).Int("status", res.StatusCode()).Err(err).Msg("Failed to scrape data from remote scraper")
 	}
 
-	req.Reset()
-	res.Reset()
-
 	// Embed scraper
-	req.Header.SetMethod("GET")
-	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
-	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
-	req.Header.Set("Connection", "close")
-	req.Header.Set("Sec-Fetch-Mode", "navigate")
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36")
-	req.SetRequestURI("https://www.instagram.com/p/" + i.PostID + "/embed/captioned/")
+	// req.Header.SetMethod("GET")
+	// req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
+	// req.Header.Set("Accept-Language", "en-US,en;q=0.9")
+	// req.Header.Set("Connection", "close")
+	// req.Header.Set("Sec-Fetch-Mode", "navigate")
+	// req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36")
+	// req.SetRequestURI("https://www.instagram.com/p/" + i.PostID + "/embed/captioned/")
 
-	var err error
+	req, err := http.NewRequest("GET", "https://www.instagram.com/p/"+i.PostID+"/embed/captioned/", nil)
+	if err != nil {
+		return err
+	}
+
+	var body []byte
 	for retries := 0; retries < 3; retries++ {
-		err := client.DoTimeout(req, res, timeout)
-		if err == nil && len(res.Body()) > 0 {
-			break
+		var res *http.Response
+		if res, err = client.Do(req); err == nil {
+			defer res.Body.Close()
+			body, err = io.ReadAll(res.Body)
+			if err == nil && len(body) > 0 {
+				break
+			}
 		}
+	}
+	if err != nil {
+		return err
 	}
 
 	// Pattern matching using LDE
@@ -177,7 +179,7 @@ func (i *InstaData) ScrapeData() error {
 
 	// TimeSliceImpl
 	ldeMatch := false
-	for _, line := range bytes.Split(res.Body(), []byte("\n")) {
+	for _, line := range bytes.Split(body, []byte("\n")) {
 		// Check if line contains TimeSliceImpl
 		ldeMatch, _ = l.Extract(line)
 	}
@@ -205,7 +207,7 @@ func (i *InstaData) ScrapeData() error {
 	}
 
 	// Scrape from embed HTML
-	embedHTML, err := scrapeFromEmbedHTML(res.Body())
+	embedHTML, err := scrapeFromEmbedHTML(body)
 	if err != nil {
 		log.Error().Str("postID", i.PostID).Err(err).Msg("Failed to parse data from scrapeFromEmbedHTML")
 		return err
@@ -219,7 +221,7 @@ func (i *InstaData) ScrapeData() error {
 
 	// Scrape from GraphQL API
 	if videoBlocked || len(username) == 0 {
-		gqlValue, err := scrapeFromGQL(i.PostID, req, res)
+		gqlValue, err := scrapeFromGQL(i.PostID)
 		if err != nil {
 			log.Error().Str("postID", i.PostID).Err(err).Msg("Failed to scrape data from scrapeFromGQL")
 			return err
@@ -351,33 +353,7 @@ func scrapeFromEmbedHTML(embedHTML []byte) (string, error) {
 	}`, nil
 }
 
-func scrapeFromGQL(postID string, req *fasthttp.Request, res *fasthttp.Response) ([]byte, error) {
-	req.Reset()
-	res.Reset()
-
-	req.Header.SetMethod("POST")
-	req.Header.Set("accept", "*/*")
-	req.Header.Set("accept-language", "en-US,en;q=0.9")
-	req.Header.Set("content-type", "application/x-www-form-urlencoded")
-	req.Header.Set("origin", "https://www.instagram.com")
-	req.Header.Set("priority", "u=1, i")
-	req.Header.Set("sec-ch-prefers-color-scheme", "dark")
-	req.Header.Set("sec-ch-ua", `"Google Chrome";v="125", "Chromium";v="125", "Not.A/Brand";v="24"`)
-	req.Header.Set("sec-ch-ua-full-version-list", `"Google Chrome";v="125.0.6422.142", "Chromium";v="125.0.6422.142", "Not.A/Brand";v="24.0.0.0"`)
-	req.Header.Set("sec-ch-ua-mobile", "?0")
-	req.Header.Set("sec-ch-ua-model", `""`)
-	req.Header.Set("sec-ch-ua-platform", `"macOS"`)
-	req.Header.Set("sec-ch-ua-platform-version", `"12.7.4"`)
-	req.Header.Set("sec-fetch-dest", "empty")
-	req.Header.Set("sec-fetch-mode", "cors")
-	req.Header.Set("sec-fetch-site", "same-origin")
-	req.Header.Set("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36")
-	req.Header.Set("x-asbd-id", "129477")
-	req.Header.Set("x-bloks-version-id", "e2004666934296f275a5c6b2c9477b63c80977c7cc0fd4b9867cb37e36092b68")
-	req.Header.Set("x-fb-friendly-name", "PolarisPostActionLoadPostQueryQuery")
-	req.Header.Set("x-ig-app-id", "936619743392459")
-
-	req.SetRequestURI("https://www.instagram.com/graphql/query/")
+func scrapeFromGQL(postID string) ([]byte, error) {
 	gqlParams := url.Values{
 		"av":                       {"0"},
 		"__d":                      {"www"},
@@ -404,10 +380,37 @@ func scrapeFromGQL(postID string, req *fasthttp.Request, res *fasthttp.Response)
 		"server_timestamps":        {"true"},
 		"doc_id":                   {"25531498899829322"},
 	}
-	req.SetBodyString(gqlParams.Encode())
-
-	if err := client.DoTimeout(req, res, timeout); err != nil {
+	req, err := http.NewRequest("POST", "https://www.instagram.com/graphql/query/", strings.NewReader(gqlParams.Encode()))
+	if err != nil {
 		return nil, err
 	}
-	return res.Body(), nil
+	req.Header = http.Header{
+		"Accept":                      {"*/*"},
+		"Accept-Language":             {"en-US,en;q=0.9"},
+		"Content-Type":                {"application/x-www-form-urlencoded"},
+		"Origin":                      {"https://www.instagram.com"},
+		"Priority":                    {"u=1, i"},
+		"Sec-Ch-Prefers-Color-Scheme": {"dark"},
+		"Sec-Ch-Ua":                   {`"Google Chrome";v="125", "Chromium";v="125", "Not.A/Brand";v="24"`},
+		"Sec-Ch-Ua-Full-Version-List": {`"Google Chrome";v="125.0.6422.142", "Chromium";v="125.0.6422.142", "Not.A/Brand";v="24.0.0.0"`},
+		"Sec-Ch-Ua-Mobile":            {"?0"},
+		"Sec-Ch-Ua-Model":             {`""`},
+		"Sec-Ch-Ua-Platform":          {`"macOS"`},
+		"Sec-Ch-Ua-Platform-Version":  {`"12.7.4"`},
+		"Sec-Fetch-Dest":              {"empty"},
+		"Sec-Fetch-Mode":              {"cors"},
+		"Sec-Fetch-Site":              {"same-origin"},
+		"User-Agent":                  {"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"},
+		"X-Asbd-Id":                   {"129477"},
+		"X-Bloks-Version-Id":          {"e2004666934296f275a5c6b2c9477b63c80977c7cc0fd4b9867cb37e36092b68"},
+		"X-Fb-Friendly-Name":          {"PolarisPostActionLoadPostQueryQuery"},
+		"X-Ig-App-Id":                 {"936619743392459"},
+	}
+
+	client := http.Client{Timeout: timeout}
+	if res, err := client.Do(req); err == nil {
+		defer res.Body.Close()
+		return io.ReadAll(res.Body)
+	}
+	return nil, err
 }

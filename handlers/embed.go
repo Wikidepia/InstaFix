@@ -66,7 +66,7 @@ func Embed(w http.ResponseWriter, r *http.Request) {
 	viewsData.Title = "InstaFix"
 	viewsData.URL = "https://instagram.com" + r.URL.Path
 	if !utils.IsBot(r.Header.Get("User-Agent")) {
-		w.Header().Set("Location", viewsData.URL)
+		http.Redirect(w, r, viewsData.URL, http.StatusFound)
 		return
 	}
 
@@ -125,7 +125,7 @@ func Embed(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if isDirect {
-		w.Header().Set("Location", sb.String())
+		http.Redirect(w, r, sb.String(), http.StatusFound)
 		return
 	}
 

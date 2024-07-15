@@ -145,7 +145,7 @@ func Grid(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(item.Medias) == 1 || len(mediaURLs) == 1 {
-		w.Header().Set("Location", "/images/"+postID+"/1")
+		http.Redirect(w, r, "/images/"+postID+"/1", http.StatusFound)
 		return
 	}
 

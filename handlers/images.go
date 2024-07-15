@@ -23,6 +23,6 @@ func Images(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	imageURL := item.Medias[max(1, mediaNum)-1].URL
-	w.Header().Set("Location", imageURL)
+	http.Redirect(w, r, imageURL, http.StatusFound)
 	return
 }

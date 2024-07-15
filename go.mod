@@ -15,7 +15,6 @@ require (
 	github.com/rs/zerolog v1.33.0
 	github.com/tdewolff/parse/v2 v2.7.15
 	github.com/tidwall/gjson v1.17.1
-	github.com/valyala/fasthttp v1.55.0
 	golang.org/x/image v0.18.0
 	golang.org/x/net v0.26.0
 	golang.org/x/sync v0.7.0
@@ -23,7 +22,6 @@ require (
 
 require (
 	github.com/DataDog/zstd v1.5.5 // indirect
-	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/andybalholm/cascadia v1.3.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cockroachdb/errors v1.11.3 // indirect
@@ -47,7 +45,6 @@ require (
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
-	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8 // indirect
 	golang.org/x/sys v0.21.0 // indirect
 	golang.org/x/text v0.16.0 // indirect

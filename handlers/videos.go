@@ -27,9 +27,9 @@ func Videos(w http.ResponseWriter, r *http.Request) {
 
 	// Redirect to proxy if not TelegramBot in User-Agent
 	if strings.Contains(r.Header.Get("User-Agent"), "TelegramBot") {
-		w.Header().Set("Location", videoURL)
+		http.Redirect(w, r, videoURL, http.StatusFound)
 		return
 	}
-	w.Header().Set("Location", "https://envoy.lol/"+videoURL)
+	http.Redirect(w, r, "https://envoy.lol/"+videoURL, http.StatusFound)
 	return
 }
