@@ -20,8 +20,6 @@ import (
 )
 
 func init() {
-	scraper.InitDB()
-
 	// Create static folder if not exists
 	os.Mkdir("static", 0755)
 }
@@ -50,6 +48,10 @@ func main() {
 	}
 	scraper.InitLRU(gridCacheMax)
 
+	// Initialize cache / DB
+	scraper.InitDB()
+	defer scraper.DB.Close()
+
 	// Evict cache every minute
 	go func() {
 		for {
@@ -62,9 +64,6 @@ func main() {
 		log.Info().Msg("Starting pprof server")
 		http.ListenAndServe("0.0.0.0:6060", nil)
 	}()
-
-	// Close database when app closes
-	// defer scraper.DB.Close()
 
 	mux := http.NewServeMux()
 	// mux.HandleFunc("GET /{username}/p/{postID}", handlers.Embed)
