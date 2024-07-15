@@ -4,13 +4,11 @@ import (
 	scraper "instafix/handlers/scraper"
 	"net/http"
 	"strconv"
-
-	"github.com/julienschmidt/httprouter"
 )
 
-func Images(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	postID := ps.ByName("postID")
-	mediaNum, err := strconv.Atoi(ps.ByName("mediaNum"))
+func Images(w http.ResponseWriter, r *http.Request) {
+	postID := r.PathValue("postID")
+	mediaNum, err := strconv.Atoi(r.PathValue("mediaNum"))
 	if err != nil {
 		return
 	}

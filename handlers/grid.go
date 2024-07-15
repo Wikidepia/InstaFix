@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/RyanCarrier/dijkstra/v2"
-	"github.com/julienschmidt/httprouter"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/image/draw"
 )
@@ -115,8 +114,8 @@ func GenerateGrid(images []image.Image) (image.Image, error) {
 	return canvas, nil
 }
 
-func Grid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	postID := ps.ByName("postID")
+func Grid(w http.ResponseWriter, r *http.Request) {
+	postID := r.PathValue("postID")
 	gridFname := filepath.Join("static", postID+".jpeg")
 
 	// If already exists, return

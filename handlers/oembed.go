@@ -6,10 +6,9 @@ import (
 	"net/http"
 
 	"github.com/PurpleSec/escape"
-	"github.com/julienschmidt/httprouter"
 )
 
-func OEmbed(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func OEmbed(w http.ResponseWriter, r *http.Request) {
 	headingText := r.URL.Query().Get("text")
 	headingURL := r.URL.Query().Get("url")
 	if headingText == "" || headingURL == "" {

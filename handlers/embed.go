@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/julienschmidt/httprouter"
 	"github.com/valyala/bytebufferpool"
 )
 
@@ -27,7 +26,7 @@ func mediaidToCode(mediaID int) string {
 	return shortCode
 }
 
-func Embed(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func Embed(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	viewsData := &model.ViewsData{}
 	viewsBuf := bytebufferpool.Get()
@@ -36,34 +35,25 @@ func Embed(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var err error
 	var mediaNum int
 	urlQuery := r.URL.Query()
-	postID := ps.ByName("postID")
-	mediaNumParams := ps.ByName("mediaNum")
+	postID := r.PathValue("postID")
+	mediaNumParams := r.PathValue("mediaNum")
 	if mediaNumParams == "" {
 		imgIndex := urlQuery.Get("img_index")
 		if imgIndex != "" {
 			mediaNumParams = imgIndex
 		}
-		mediaNum, err = strconv.Atoi(mediaNumParams)
-		if err != nil {
-			viewsData.Description = "Invalid img_index parameter"
-			views.Embed(viewsData, w)
-			return
+		if mediaNumParams != "" {
+			mediaNum, err = strconv.Atoi(mediaNumParams)
+			if err != nil {
+				viewsData.Description = "Invalid img_index parameter"
+				views.Embed(viewsData, w)
+				return
+			}
 		}
 	}
 
-	direct, err := strconv.ParseBool(urlQuery.Get("direct"))
-	if err != nil {
-		viewsData.Description = "Invalid direct parameter"
-		views.Embed(viewsData, w)
-		return
-	}
-
-	isGallery, err := strconv.ParseBool(urlQuery.Get("gallery"))
-	if err != nil {
-		viewsData.Description = "Invalid gallery parameter"
-		views.Embed(viewsData, w)
-		return
-	}
+	isDirect, _ := strconv.ParseBool(urlQuery.Get("direct"))
+	isGallery, _ := strconv.ParseBool(urlQuery.Get("gallery"))
 
 	// Stories use mediaID (int) instead of postID
 	if strings.Contains(r.URL.Path, "/stories/") {
@@ -138,7 +128,7 @@ func Embed(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		viewsData.OEmbedURL = r.Host + "/oembed?text=" + url.QueryEscape(viewsData.Description) + "&url=" + viewsData.URL
 	}
 
-	if direct {
+	if isDirect {
 		w.Header().Set("Location", sb.String())
 		return
 	}

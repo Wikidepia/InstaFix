@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/cockroachdb/pebble"
-	"github.com/julienschmidt/httprouter"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -61,28 +60,27 @@ func main() {
 	// Close database when app closes
 	// defer scraper.DB.Close()
 
-	router := httprouter.New()
-	router.GET("/", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	mux := http.NewServeMux()
+	// mux.HandleFunc("GET /{username}/p/{postID}", handlers.Embed)
+	// mux.HandleFunc("GET /{username}/p/{postID}/{mediaNum}", handlers.Embed)
+	// mux.HandleFunc("GET /{username}/reel/{postID}", handlers.Embed)
+
+	mux.HandleFunc("GET /tv/{postID}", handlers.Embed)
+	mux.HandleFunc("GET /reel/{postID}", handlers.Embed)
+	mux.HandleFunc("GET /reels/{postID}", handlers.Embed)
+	mux.HandleFunc("GET /stories/{username}/{postID}", handlers.Embed)
+	mux.HandleFunc("GET /p/{postID}", handlers.Embed)
+	mux.HandleFunc("GET /p/{postID}/{mediaNum}", handlers.Embed)
+
+	mux.HandleFunc("/images/{postID}/{mediaNum}", handlers.Images)
+	mux.HandleFunc("/videos/{postID}/{mediaNum}", handlers.Videos)
+	mux.HandleFunc("/grid/{postID}", handlers.Grid)
+	mux.HandleFunc("/oembed", handlers.OEmbed)
+	mux.HandleFunc("/{$}", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		views.Home(w)
 	})
-	// router.GET("/:username/p/:postID", handlers.Embed)
-	// router.GET("/:username/p/:postID/:mediaNum", handlers.Embed)
-	// router.GET("/:username/reel/:postID", handlers.Embed)
-
-	router.GET("/p/:postID", handlers.Embed)
-	router.GET("/tv/:postID", handlers.Embed)
-	router.GET("/reel/:postID", handlers.Embed)
-	router.GET("/reels/:postID", handlers.Embed)
-	router.GET("/stories/:username/:postID", handlers.Embed)
-	router.GET("/p/:postID/:mediaNum", handlers.Embed)
-
-	router.GET("/images/:postID/:mediaNum", handlers.Images)
-	router.GET("/videos/:postID/:mediaNum", handlers.Videos)
-	router.GET("/grid/:postID", handlers.Grid)
-	router.GET("/oembed", handlers.OEmbed)
-
-	if err := http.ListenAndServe(*listenAddr, router); err != nil {
+	if err := http.ListenAndServe(*listenAddr, mux); err != nil {
 		log.Fatal().Err(err).Msg("Failed to listen")
 	}
 }

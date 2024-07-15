@@ -5,13 +5,11 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-
-	"github.com/julienschmidt/httprouter"
 )
 
-func Videos(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	postID := ps.ByName("postID")
-	mediaNum, err := strconv.Atoi(ps.ByName("mediaNum"))
+func Videos(w http.ResponseWriter, r *http.Request) {
+	postID := r.PathValue("postID")
+	mediaNum, err := strconv.Atoi(r.PathValue("mediaNum"))
 	if err != nil {
 		return
 	}
