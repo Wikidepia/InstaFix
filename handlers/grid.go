@@ -6,7 +6,6 @@ import (
 	scraper "instafix/handlers/scraper"
 	"io"
 	"math"
-	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -20,15 +19,6 @@ import (
 	"golang.org/x/image/draw"
 )
 
-var transport = &http.Transport{
-	DialContext: (&net.Dialer{
-		Timeout: 5 * time.Second,
-	}).DialContext,
-	TLSHandshakeTimeout:   5 * time.Second,
-	ResponseHeaderTimeout: 5 * time.Second,
-	ExpectContinueTimeout: 1 * time.Second,
-	DisableKeepAlives:     true,
-}
 var timeout = 60 * time.Second
 
 // getHeight returns the height of the rows, imagesWH [w,h]
@@ -162,12 +152,12 @@ func Grid(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	var wg sync.WaitGroup
 	images := make([]image.Image, len(mediaURLs))
-	client := http.Client{Transport: transport, Timeout: timeout}
 	for i, mediaURL := range mediaURLs {
 		wg.Add(1)
 
 		go func(i int, url string) {
 			defer wg.Done()
+			client := http.Client{Timeout: timeout}
 			req, err := http.NewRequest(http.MethodGet, url, http.NoBody)
 			if err != nil {
 				return
