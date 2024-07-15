@@ -134,7 +134,7 @@ func (i *InstaData) ScrapeData() error {
 		req.Header.Set("Accept-Encoding", "gzip, deflate, br")
 		if res, err := client.Do(req); err == nil {
 			defer res.Body.Close()
-			iDataGunzip, err := io.ReadAll(req.Body)
+			iDataGunzip, err := io.ReadAll(res.Body)
 			if err == nil {
 				if err = binary.Unmarshal(iDataGunzip, i); err == nil {
 					log.Info().Str("postID", i.PostID).Msg("Data parsed from remote scraper")
