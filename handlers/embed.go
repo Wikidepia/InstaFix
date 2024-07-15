@@ -9,8 +9,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-
-	"github.com/valyala/bytebufferpool"
 )
 
 func mediaidToCode(mediaID int) string {
@@ -29,8 +27,6 @@ func mediaidToCode(mediaID int) string {
 func Embed(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	viewsData := &model.ViewsData{}
-	viewsBuf := bytebufferpool.Get()
-	defer bytebufferpool.Put(viewsBuf)
 
 	var err error
 	var mediaNum int
