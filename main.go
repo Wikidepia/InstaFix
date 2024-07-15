@@ -8,6 +8,7 @@ import (
 	"instafix/utils"
 	"instafix/views"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"strconv"
 	"strings"
@@ -55,6 +56,11 @@ func main() {
 			evictCache()
 			time.Sleep(5 * time.Minute)
 		}
+	}()
+
+	go func() {
+		log.Info().Msg("Starting pprof server")
+		http.ListenAndServe("0.0.0.0:6060", nil)
 	}()
 
 	// Close database when app closes
