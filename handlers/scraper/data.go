@@ -120,8 +120,6 @@ func GetData(postID string) (*InstaData, error) {
 }
 
 func (i *InstaData) ScrapeData() error {
-	var gqlData gjson.Result
-
 	client := http.Client{Timeout: timeout}
 	defer client.CloseIdleConnections()
 
@@ -174,6 +172,7 @@ func (i *InstaData) ScrapeData() error {
 		ldeMatch, _ = l.Extract(line)
 	}
 
+	var timeSliceData gjson.Result
 	if ldeMatch {
 		lexer := js.NewLexer(parse.NewInputBytes(l.GetTimeSliceImplValue()))
 		for {
@@ -189,9 +188,8 @@ func (i *InstaData) ScrapeData() error {
 					log.Error().Str("postID", i.PostID).Err(err).Msg("Failed to parse data from TimeSliceImpl")
 					return err
 				}
-				timeSlice := gjson.Parse(unescapeData)
+				timeSliceData = gjson.Parse(unescapeData).Get("gql_data")
 				log.Info().Str("postID", i.PostID).Msg("Data parsed from TimeSliceImpl")
-				gqlData = timeSlice.Get("gql_data")
 			}
 		}
 	}
@@ -202,11 +200,12 @@ func (i *InstaData) ScrapeData() error {
 		log.Error().Str("postID", i.PostID).Err(err).Msg("Failed to parse data from scrapeFromEmbedHTML")
 		return err
 	}
-	gqlData = gjson.Parse(embedHTML)
-	smedia := gqlData.Get("shortcode_media")
+	embedData := gjson.Parse(embedHTML)
+	smedia := embedData.Get("shortcode_media")
 	videoBlocked := smedia.Get("video_blocked").Bool()
 	username := smedia.Get("owner.username").String()
 
+	var gqlData gjson.Result
 	// Scrape from GraphQL API
 	if videoBlocked || len(username) == 0 {
 		gqlValue, err := scrapeFromGQL(i.PostID)
@@ -214,14 +213,20 @@ func (i *InstaData) ScrapeData() error {
 			log.Error().Str("postID", i.PostID).Err(err).Msg("Failed to scrape data from scrapeFromGQL")
 			return err
 		}
-		gqlData := gjson.Parse(utils.B2S(gqlValue))
-		// Need to show embeds even if the video is blocked
-		if gqlData.Get("require_login").Bool() && !videoBlocked {
-			return errors.New("scrapeFromGQL is blocked")
+		gqlData = gjson.Parse(utils.B2S(gqlValue)).Get("data")
+	} else {
+		if timeSliceData.Exists() {
+			gqlData = timeSliceData
+		} else {
+			gqlData = embedData
 		}
-		if gqlData.Get("data").Exists() {
-			log.Info().Str("postID", i.PostID).Msg("Data scraped from scrapeFromGQL")
-			gqlData = gqlData.Get("data")
+	}
+
+	// If gqlData is blocked, use timeSliceData or embedData
+	if gqlData.Get("require_login").Bool() {
+		gqlData = timeSliceData
+		if !timeSliceData.Exists() {
+			gqlData = embedData
 		}
 	}
 
