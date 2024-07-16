@@ -121,7 +121,6 @@ func GetData(postID string) (*InstaData, error) {
 
 func (i *InstaData) ScrapeData() error {
 	client := http.Client{Timeout: timeout}
-	defer client.CloseIdleConnections()
 
 	// Scrape from remote scraper if available
 	if len(RemoteScraperAddr) > 0 {
