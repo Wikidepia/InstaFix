@@ -69,6 +69,7 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
+	r.Use(middleware.StripSlashes)
 	r.Mount("/debug", middleware.Profiler())
 
 	r.Get("/tv/{postID}/", handlers.Embed)
