@@ -8,17 +8,19 @@ InstaFix serves fixed Instagram image and video embeds. Heavily inspired by [fxt
 
 Add `dd` before `instagram.com` to show Instagram embeds, or
 
+<img src=".github/assets/orig_embed.jpg" width="450">
+
 ### Embed Media Only
 
 Add `d.dd` before `instagram.com` to show only the media.
 
-<img src=".github/assets/media_only.jpg" height="256">
+<img src=".github/assets/media_only.jpg" width="450">
 
 ### Gallery View
 
 Add `g.dd` before `instagram.com` to show only the author and the media, without any caption.
 
-<img src=".github/assets/no_caption.jpg" height="256">
+<img src=".github/assets/no_caption.jpg" width="450">
 
 ## Deploy InstaFix yourself (locally)
 
