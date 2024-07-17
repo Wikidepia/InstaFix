@@ -9,6 +9,8 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func mediaidToCode(mediaID int) string {
@@ -30,11 +32,10 @@ func Embed(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 	var mediaNum int
-	urlQuery := r.URL.Query()
-	postID := r.PathValue("postID")
-	mediaNumParams := r.PathValue("mediaNum")
+	postID := chi.URLParam(r, "postID")
+	mediaNumParams := chi.URLParam(r, "mediaNum")
 	if mediaNumParams == "" {
-		imgIndex := urlQuery.Get("img_index")
+		imgIndex := r.URL.Query().Get("img_index")
 		if imgIndex != "" {
 			mediaNumParams = imgIndex
 		}
@@ -48,8 +49,8 @@ func Embed(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	isDirect, _ := strconv.ParseBool(urlQuery.Get("direct"))
-	isGallery, _ := strconv.ParseBool(urlQuery.Get("gallery"))
+	isDirect, _ := strconv.ParseBool(r.URL.Query().Get("direct"))
+	isGallery, _ := strconv.ParseBool(r.URL.Query().Get("gallery"))
 
 	// Stories use mediaID (int) instead of postID
 	if strings.Contains(r.URL.Path, "/stories/") {
@@ -64,7 +65,7 @@ func Embed(w http.ResponseWriter, r *http.Request) {
 
 	// If User-Agent is not bot, redirect to Instagram
 	viewsData.Title = "InstaFix"
-	viewsData.URL = "https://instagram.com" + r.URL.Path
+	viewsData.URL = "https://instagram.com/p/" + r.URL.RequestURI()
 	if !utils.IsBot(r.Header.Get("User-Agent")) {
 		http.Redirect(w, r, viewsData.URL, http.StatusFound)
 		return

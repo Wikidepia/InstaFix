@@ -11,6 +11,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/cockroachdb/pebble v1.1.1
 	github.com/elastic/go-freelru v0.13.0
+	github.com/go-chi/chi/v5 v5.1.0
 	github.com/kelindar/binary v1.0.19
 	github.com/rs/zerolog v1.33.0
 	github.com/tdewolff/parse/v2 v2.7.15

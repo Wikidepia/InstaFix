@@ -5,11 +5,13 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func Videos(w http.ResponseWriter, r *http.Request) {
-	postID := r.PathValue("postID")
-	mediaNum, err := strconv.Atoi(r.PathValue("mediaNum"))
+	postID := chi.URLParam(r, "postID")
+	mediaNum, err := strconv.Atoi(chi.URLParam(r, "mediaNum"))
 	if err != nil {
 		return
 	}

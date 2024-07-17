@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/RyanCarrier/dijkstra/v2"
+	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/image/draw"
 	"golang.org/x/sync/singleflight"
@@ -117,7 +118,7 @@ func GenerateGrid(images []image.Image) (image.Image, error) {
 }
 
 func Grid(w http.ResponseWriter, r *http.Request) {
-	postID := r.PathValue("postID")
+	postID := chi.URLParam(r, "postID")
 	gridFname := filepath.Join("static", postID+".jpeg")
 
 	// If already exists, return
