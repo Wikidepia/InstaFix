@@ -63,14 +63,12 @@ func main() {
 	}()
 
 	go func() {
-		log.Info().Msg("Starting pprof server")
-		http.ListenAndServe("0.0.0.0:6060", nil)
+		http.ListenAndServe("localhost:6060", nil)
 	}()
 
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.StripSlashes)
-	r.Mount("/debug", middleware.Profiler())
 
 	r.Get("/tv/{postID}", handlers.Embed)
 	r.Get("/reel/{postID}", handlers.Embed)
