@@ -65,7 +65,7 @@ func Embed(w http.ResponseWriter, r *http.Request) {
 
 	// If User-Agent is not bot, redirect to Instagram
 	viewsData.Title = "InstaFix"
-	viewsData.URL = "https://instagram.com/p/" + r.URL.RequestURI()
+	viewsData.URL = "https://instagram.com" + r.URL.RequestURI()
 	if !utils.IsBot(r.Header.Get("User-Agent")) {
 		http.Redirect(w, r, viewsData.URL, http.StatusFound)
 		return
