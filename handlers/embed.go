@@ -31,22 +31,21 @@ func Embed(w http.ResponseWriter, r *http.Request) {
 	viewsData := &model.ViewsData{}
 
 	var err error
-	var mediaNum int
 	postID := chi.URLParam(r, "postID")
 	mediaNumParams := chi.URLParam(r, "mediaNum")
 	if mediaNumParams == "" {
 		imgIndex := r.URL.Query().Get("img_index")
 		if imgIndex != "" {
 			mediaNumParams = imgIndex
+		} else {
+			mediaNumParams = "0"
 		}
-		if mediaNumParams != "" {
-			mediaNum, err = strconv.Atoi(mediaNumParams)
-			if err != nil {
-				viewsData.Description = "Invalid img_index parameter"
-				views.Embed(viewsData, w)
-				return
-			}
-		}
+	}
+	mediaNum, err := strconv.Atoi(mediaNumParams)
+	if err != nil {
+		viewsData.Description = "Invalid img_index parameter"
+		views.Embed(viewsData, w)
+		return
 	}
 
 	isDirect, _ := strconv.ParseBool(r.URL.Query().Get("direct"))
