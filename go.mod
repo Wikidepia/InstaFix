@@ -27,5 +27,3 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 	golang.org/x/sys v0.21.0 // indirect
 )
-
-replace github.com/bamiaux/rez => github.com/Wikidepia/rez v0.0.0-20240703041142-134b08cf4125
