@@ -1,47 +1,47 @@
 package utils
 
 import (
-	"bytes"
+	"strings"
 )
 
-var knownBots = [][]byte{
-	[]byte("bot"),
-	[]byte("facebook"),
-	[]byte("embed"),
-	[]byte("got"),
-	[]byte("firefox/92"),
-	[]byte("firefox/38"),
-	[]byte("curl"),
-	[]byte("wget"),
-	[]byte("go-http"),
-	[]byte("yahoo"),
-	[]byte("generator"),
-	[]byte("whatsapp"),
-	[]byte("preview"),
-	[]byte("link"),
-	[]byte("proxy"),
-	[]byte("vkshare"),
-	[]byte("images"),
-	[]byte("analyzer"),
-	[]byte("index"),
-	[]byte("crawl"),
-	[]byte("spider"),
-	[]byte("python"),
-	[]byte("cfnetwork"),
-	[]byte("node"),
-	[]byte("mastodon"),
-	[]byte("http.rb"),
-	[]byte("discord"),
-	[]byte("ruby"),
-	[]byte("bun/"),
-	[]byte("fiddler"),
-	[]byte("revoltchat"),
+var knownBots = []string{
+	"bot",
+	"facebook",
+	"embed",
+	"got",
+	"firefox/92",
+	"firefox/38",
+	"curl",
+	"wget",
+	"go-http",
+	"yahoo",
+	"generator",
+	"whatsapp",
+	"preview",
+	"link",
+	"proxy",
+	"vkshare",
+	"images",
+	"analyzer",
+	"index",
+	"crawl",
+	"spider",
+	"python",
+	"cfnetwork",
+	"node",
+	"mastodon",
+	"http.rb",
+	"discord",
+	"ruby",
+	"bun/",
+	"fiddler",
+	"revoltchat",
 }
 
-func IsBot(userAgent []byte) bool {
-	userAgent = bytes.ToLower(userAgent)
+func IsBot(userAgent string) bool {
+	userAgent = strings.ToLower(userAgent)
 	for _, bot := range knownBots {
-		if bytes.Contains(userAgent, bot) {
+		if strings.Contains(userAgent, bot) {
 			return true
 		}
 	}
