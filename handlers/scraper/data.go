@@ -13,12 +13,12 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/PurpleSec/escape"
-	"github.com/cockroachdb/pebble"
 	"github.com/kelindar/binary"
 	"github.com/rs/zerolog/log"
 	"github.com/tdewolff/parse/v2"
 	"github.com/tdewolff/parse/v2/js"
 	"github.com/tidwall/gjson"
+	bolt "go.etcd.io/bbolt"
 	"golang.org/x/net/html"
 	"golang.org/x/sync/singleflight"
 )
@@ -50,20 +50,29 @@ func GetData(postID string) (*InstaData, error) {
 		return nil, errors.New("postID is not a valid Instagram post ID")
 	}
 
-	cacheInstaData, closer, err := DB.Get(utils.S2B(postID))
-	if err != nil && err != pebble.ErrNotFound {
-		log.Error().Str("postID", postID).Err(err).Msg("Failed to get data from cache")
+	i := &InstaData{PostID: postID}
+	err := DB.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("data"))
+		if b == nil {
+			return nil
+		}
+		v := b.Get([]byte(postID))
+		if v == nil {
+			return nil
+		}
+		err := binary.Unmarshal(v, i)
+		if err != nil {
+			return err
+		}
+		log.Debug().Str("postID", postID).Msg("Data parsed from cache")
+		return nil
+	})
+	if err != nil {
 		return nil, err
 	}
 
-	if len(cacheInstaData) > 0 {
-		i := &InstaData{PostID: postID}
-		err := binary.Unmarshal(cacheInstaData, i)
-		closer.Close()
-		if err != nil {
-			return nil, err
-		}
-		log.Debug().Str("postID", postID).Msg("Data parsed from cache")
+	// Successfully parsed from cache
+	if len(i.Medias) != 0 {
 		return i, nil
 	}
 
@@ -92,23 +101,23 @@ func GetData(postID string) (*InstaData, error) {
 			return false, err
 		}
 
-		batch := DB.NewBatch()
-		// Write cache to DB
-		if err := batch.Set(utils.S2B(item.PostID), bb, pebble.Sync); err != nil {
-			log.Error().Str("postID", item.PostID).Err(err).Msg("Failed to save data to cache")
-			return false, err
-		}
+		err = DB.Batch(func(tx *bolt.Tx) error {
+			dataBucket := tx.Bucket([]byte("data"))
+			if dataBucket == nil {
+				return nil
+			}
+			dataBucket.Put(utils.S2B(item.PostID), bb)
 
-		// Write expire to DB
-		expTime := strconv.FormatInt(time.Now().Add(24*time.Hour).UnixNano(), 10)
-		if err := batch.Set(append([]byte("exp-"), expTime...), utils.S2B(item.PostID), pebble.Sync); err != nil {
+			ttlBucket := tx.Bucket([]byte("ttl"))
+			if ttlBucket == nil {
+				return nil
+			}
+			expTime := strconv.FormatInt(time.Now().Add(24*time.Hour).UnixNano(), 10)
+			ttlBucket.Put(utils.S2B(expTime), utils.S2B(item.PostID))
+			return nil
+		})
+		if err != nil {
 			log.Error().Str("postID", item.PostID).Err(err).Msg("Failed to save data to cache")
-			return false, err
-		}
-
-		// Commit batch
-		if err := batch.Commit(pebble.Sync); err != nil {
-			log.Error().Str("postID", item.PostID).Err(err).Msg("Failed to commit batch")
 			return false, err
 		}
 		return item, nil
