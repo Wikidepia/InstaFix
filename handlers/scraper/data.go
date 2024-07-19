@@ -138,7 +138,8 @@ func (i *InstaData) ScrapeData() error {
 		if err != nil {
 			return err
 		}
-		if res, err := client.Do(req); err == nil {
+		res, err := client.Do(req)
+		if res != nil && res.StatusCode == 200 {
 			defer res.Body.Close()
 			iDataGunzip, err := io.ReadAll(res.Body)
 			if err == nil {
@@ -158,8 +159,8 @@ func (i *InstaData) ScrapeData() error {
 
 	var body []byte
 	for retries := 0; retries < 3; retries++ {
-		var res *http.Response
-		if res, err = client.Do(req); err == nil {
+		res, err := client.Do(req)
+		if res != nil && res.StatusCode == 200 {
 			defer res.Body.Close()
 			body, err = io.ReadAll(res.Body)
 			if err == nil && len(body) > 0 {
@@ -167,9 +168,7 @@ func (i *InstaData) ScrapeData() error {
 			}
 		}
 	}
-	if err != nil {
-		return err
-	}
+
 	// Pattern matching using LDE
 	l := &Line{}
 
@@ -185,7 +184,7 @@ func (i *InstaData) ScrapeData() error {
 		lexer := js.NewLexer(parse.NewInputBytes(l.GetTimeSliceImplValue()))
 		for {
 			tt, text := lexer.Next()
-			if tt == js.ErrorToken {
+			if tt == js.ErrorToken || text == nil {
 				break
 			}
 			if tt == js.StringToken && bytes.Contains(text, []byte("shortcode_media")) {
@@ -410,9 +409,10 @@ func scrapeFromGQL(postID string) ([]byte, error) {
 	}
 
 	client := http.Client{Timeout: timeout}
-	if res, err := client.Do(req); err == nil {
-		defer res.Body.Close()
-		return io.ReadAll(res.Body)
+	res, err := client.Do(req)
+	if err != nil || res == nil {
+		return nil, err
 	}
-	return nil, err
+	defer res.Body.Close()
+	return io.ReadAll(res.Body)
 }

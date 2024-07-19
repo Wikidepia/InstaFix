@@ -33,8 +33,12 @@ func Embed(w http.ResponseWriter, r *http.Request) {
 	var err error
 	postID := chi.URLParam(r, "postID")
 	mediaNumParams := chi.URLParam(r, "mediaNum")
+	urlQuery := r.URL.Query()
+	if urlQuery == nil {
+		return
+	}
 	if mediaNumParams == "" {
-		imgIndex := r.URL.Query().Get("img_index")
+		imgIndex := urlQuery.Get("img_index")
 		if imgIndex != "" {
 			mediaNumParams = imgIndex
 		} else {
@@ -48,8 +52,8 @@ func Embed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	isDirect, _ := strconv.ParseBool(r.URL.Query().Get("direct"))
-	isGallery, _ := strconv.ParseBool(r.URL.Query().Get("gallery"))
+	isDirect, _ := strconv.ParseBool(urlQuery.Get("direct"))
+	isGallery, _ := strconv.ParseBool(urlQuery.Get("gallery"))
 
 	// Stories use mediaID (int) instead of postID
 	if strings.Contains(r.URL.Path, "/stories/") {
