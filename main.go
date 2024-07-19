@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"instafix/handlers"
 	scraper "instafix/handlers/scraper"
@@ -14,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cockroachdb/pebble"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	bolt "go.etcd.io/bbolt"
 )
 
 func init() {
@@ -97,31 +96,31 @@ func main() {
 
 // Remove cache from Pebble if already expired
 func evictCache() {
-	iter, err := scraper.DB.NewIter(&pebble.IterOptions{LowerBound: []byte("exp-")})
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to create iterator when evicting cache")
-		return
-	}
-	defer iter.Close()
-
-	batch := scraper.DB.NewBatch()
 	curTime := time.Now().UnixNano()
-	for iter.First(); iter.Valid(); iter.Next() {
-		if !bytes.HasPrefix(iter.Key(), []byte("exp-")) {
-			continue
+	err := scraper.DB.Batch(func(tx *bolt.Tx) error {
+		ttlBucket := tx.Bucket([]byte("ttl"))
+		if ttlBucket == nil {
+			return nil
 		}
-
-		expireTimestamp := bytes.Trim(iter.Key(), "exp-")
-		if n, err := strconv.ParseInt(utils.B2S(expireTimestamp), 10, 64); err == nil {
-			if n < curTime {
-				batch.Delete(iter.Key(), pebble.NoSync)
-				batch.Delete(iter.Value(), pebble.NoSync)
+		dataBucket := tx.Bucket([]byte("data"))
+		if dataBucket == nil {
+			return nil
+		}
+		c := ttlBucket.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			println(utils.B2S(k))
+			if n, err := strconv.ParseInt(utils.B2S(k), 10, 64); err == nil {
+				if n < curTime {
+					ttlBucket.Delete(k)
+					dataBucket.Delete(v)
+				}
+			} else {
+				log.Error().Err(err).Msg("Failed to parse expire timestamp in cache")
 			}
-		} else {
-			log.Error().Err(err).Msg("Failed to parse expire timestamp in cache")
 		}
-	}
-	if err := batch.Commit(pebble.NoSync); err != nil {
-		log.Error().Err(err).Msg("Failed to write when evicting cache")
+		return nil
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to evict cache")
 	}
 }
