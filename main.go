@@ -106,7 +106,6 @@ func evictCache() {
 		}
 		c := ttlBucket.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
-			println(utils.B2S(k))
 			if n, err := strconv.ParseInt(utils.B2S(k), 10, 64); err == nil {
 				if n < curTime {
 					ttlBucket.Delete(k)
