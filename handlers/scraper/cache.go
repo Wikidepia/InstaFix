@@ -5,7 +5,6 @@ import (
 
 	"github.com/cespare/xxhash/v2"
 	"github.com/elastic/go-freelru"
-	"github.com/rs/zerolog/log"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -49,7 +48,7 @@ func InitLRU(maxEntries int) {
 	// Fill LRU with existing files
 	dir, err := os.ReadDir("static")
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to read static folder")
+		panic(err)
 	}
 	for _, d := range dir {
 		if !d.IsDir() {
