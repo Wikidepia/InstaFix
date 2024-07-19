@@ -4,12 +4,12 @@ import (
 	"os"
 
 	"github.com/cespare/xxhash/v2"
-	"github.com/cockroachdb/pebble"
 	"github.com/elastic/go-freelru"
 	"github.com/rs/zerolog/log"
+	bolt "go.etcd.io/bbolt"
 )
 
-var DB *pebble.DB
+var DB *bolt.DB
 var LRU *freelru.SyncedLRU[string, bool]
 
 func hashStringXXHASH(s string) uint32 {
@@ -17,11 +17,21 @@ func hashStringXXHASH(s string) uint32 {
 }
 
 func InitDB() {
-	db, err := pebble.Open("database", &pebble.Options{})
-
+	db, err := bolt.Open("cache.db", 0600, nil)
 	if err != nil {
 		panic(err)
 	}
+
+	// Create buckets
+	err = db.Update(func(tx *bolt.Tx) error {
+		tx.CreateBucketIfNotExists([]byte("data"))
+		tx.CreateBucketIfNotExists([]byte("ttl"))
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
+
 	DB = db
 }
 
