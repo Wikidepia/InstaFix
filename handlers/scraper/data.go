@@ -220,7 +220,6 @@ func (i *InstaData) ScrapeData() error {
 			slog.Error("Failed to scrape data from scrapeFromGQL", "postID", i.PostID, "err", err)
 			return err
 		}
-
 		gqlData = gjson.Parse(utils.B2S(gqlValue)).Get("data")
 	} else {
 		if timeSliceData.Exists() {
@@ -238,12 +237,16 @@ func (i *InstaData) ScrapeData() error {
 		}
 	}
 
+	status := gqlData.Get("status").String()
 	item := gqlData.Get("shortcode_media")
 	if !item.Exists() {
 		item = gqlData.Get("xdt_shortcode_media")
 		if !item.Exists() {
-			log.Error().Str("postID", i.PostID).Msg("Failed to parse data from Instagram")
-			return ErrNotFound
+			if status == "ok" {
+				return ErrNotFound
+			} else if status == "fail" {
+				return errors.New("scrapeFromGQL is blocked")
+			}
 		}
 	}
 
