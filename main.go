@@ -7,24 +7,21 @@ import (
 	scraper "instafix/handlers/scraper"
 	"instafix/utils"
 	"instafix/views"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/ansrivas/fiberprometheus/v2"
 	"github.com/cockroachdb/pebble"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/pprof"
-	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"github.com/valyala/bytebufferpool"
 )
 
 func init() {
-	scraper.InitDB()
-
 	// Create static folder if not exists
 	os.Mkdir("static", 0755)
 }
@@ -34,21 +31,6 @@ func main() {
 	gridCacheMaxFlag := flag.String("grid-cache-entries", "1024", "Maximum number of grid images to cache")
 	remoteScraperAddr := flag.String("remote-scraper", "", "Remote scraper address")
 	flag.Parse()
-
-	app := fiber.New()
-
-	recoverConfig := recover.ConfigDefault
-	recoverConfig.EnableStackTrace = true
-	app.Use(recover.New(recoverConfig))
-	app.Use(pprof.New())
-
-	// Initialize Prometheus
-	prometheus := fiberprometheus.New("InstaFix")
-	prometheus.RegisterAt(app, "/metrics")
-	app.Use(prometheus.Middleware)
-
-	// Close database when app closes
-	defer scraper.DB.Close()
 
 	// Initialize remote scraper
 	if *remoteScraperAddr != "" {
@@ -69,6 +51,10 @@ func main() {
 	}
 	scraper.InitLRU(gridCacheMax)
 
+	// Initialize cache / DB
+	scraper.InitDB()
+	defer scraper.DB.Close()
+
 	// Evict cache every minute
 	go func() {
 		for {
@@ -77,30 +63,34 @@ func main() {
 		}
 	}()
 
-	app.Get("/", func(c *fiber.Ctx) error {
-		viewsBuf := bytebufferpool.Get()
-		defer bytebufferpool.Put(viewsBuf)
-		c.Set("Content-Type", "text/html; charset=utf-8")
-		views.Home(viewsBuf)
-		return c.Send(viewsBuf.Bytes())
+	go func() {
+		http.ListenAndServe("localhost:6060", nil)
+	}()
+
+	r := chi.NewRouter()
+	r.Use(middleware.Recoverer)
+	r.Use(middleware.StripSlashes)
+
+	r.Get("/tv/{postID}", handlers.Embed)
+	r.Get("/reel/{postID}", handlers.Embed)
+	r.Get("/reels/{postID}", handlers.Embed)
+	r.Get("/stories/{username}/{postID}", handlers.Embed)
+	r.Get("/p/{postID}", handlers.Embed)
+	r.Get("/p/{postID}/{mediaNum}", handlers.Embed)
+
+	r.Get("/{username}/p/{postID}", handlers.Embed)
+	r.Get("/{username}/p/{postID}/{mediaNum}", handlers.Embed)
+	r.Get("/{username}/reel/{postID}", handlers.Embed)
+
+	r.Get("/images/{postID}/{mediaNum}", handlers.Images)
+	r.Get("/videos/{postID}/{mediaNum}", handlers.Videos)
+	r.Get("/grid/{postID}", handlers.Grid)
+	r.Get("/oembed", handlers.OEmbed)
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		views.Home(w)
 	})
-
-	app.Get("/p/:postID/", handlers.Embed())
-	app.Get("/tv/:postID", handlers.Embed())
-	app.Get("/reel/:postID", handlers.Embed())
-	app.Get("/reels/:postID", handlers.Embed())
-	app.Get("/stories/:username/:postID", handlers.Embed())
-	app.Get("/p/:postID/:mediaNum", handlers.Embed())
-	app.Get("/:username/p/:postID/", handlers.Embed())
-	app.Get("/:username/p/:postID/:mediaNum", handlers.Embed())
-	app.Get("/:username/reel/:postID", handlers.Embed())
-
-	app.Get("/images/:postID/:mediaNum", handlers.Images())
-	app.Get("/videos/:postID/:mediaNum", handlers.Videos())
-	app.Get("/grid/:postID", handlers.Grid())
-	app.Get("/oembed", handlers.OEmbed())
-
-	if err := app.Listen(*listenAddr); err != nil {
+	if err := http.ListenAndServe(*listenAddr, r); err != nil {
 		log.Fatal().Err(err).Msg("Failed to listen")
 	}
 }

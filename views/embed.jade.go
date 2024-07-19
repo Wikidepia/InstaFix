@@ -4,8 +4,7 @@ package views
 
 import (
 	"instafix/views/model"
-
-	pool "github.com/valyala/bytebufferpool"
+	"io"
 )
 
 const (
@@ -33,7 +32,8 @@ const (
 	embed__26 = `" type="application/json+oembed" title="`
 )
 
-func Embed(v *model.ViewsData, buffer *pool.ByteBuffer) {
+func Embed(v *model.ViewsData, wr io.Writer) {
+	buffer := &WriterAsBuffer{wr}
 
 	buffer.WriteString(embed__0)
 

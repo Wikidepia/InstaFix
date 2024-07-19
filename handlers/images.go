@@ -2,28 +2,29 @@ package handlers
 
 import (
 	scraper "instafix/handlers/scraper"
+	"net/http"
+	"strconv"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/go-chi/chi/v5"
 )
 
-func Images() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		postID := c.Params("postID")
-		mediaNum, err := c.ParamsInt("mediaNum", 1)
-		if err != nil {
-			return err
-		}
-
-		item, err := scraper.GetData(postID)
-		if err != nil {
-			return err
-		}
-
-		// Redirect to image URL
-		if mediaNum > len(item.Medias) {
-			return err
-		}
-		imageURL := item.Medias[max(1, mediaNum)-1].URL
-		return c.Redirect(imageURL, fiber.StatusFound)
+func Images(w http.ResponseWriter, r *http.Request) {
+	postID := chi.URLParam(r, "postID")
+	mediaNum, err := strconv.Atoi(chi.URLParam(r, "mediaNum"))
+	if err != nil {
+		return
 	}
+
+	item, err := scraper.GetData(postID)
+	if err != nil {
+		return
+	}
+
+	// Redirect to image URL
+	if mediaNum > len(item.Medias) {
+		return
+	}
+	imageURL := item.Medias[max(1, mediaNum)-1].URL
+	http.Redirect(w, r, imageURL, http.StatusFound)
+	return
 }
