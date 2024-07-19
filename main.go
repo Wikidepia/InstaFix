@@ -40,7 +40,7 @@ func main() {
 	}
 
 	// Initialize zerolog
-	zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	zerolog.SetGlobalLevel(zerolog.ErrorLevel)
 
 	// Initialize LRU
 	gridCacheMax, err := strconv.Atoi(*gridCacheMaxFlag)
