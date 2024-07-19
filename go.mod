@@ -12,7 +12,6 @@ require (
 	github.com/elastic/go-freelru v0.13.0
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/kelindar/binary v1.0.19
-	github.com/rs/zerolog v1.33.0
 	github.com/tdewolff/parse/v2 v2.7.15
 	github.com/tidwall/gjson v1.17.1
 	go.etcd.io/bbolt v1.3.10
@@ -23,8 +22,6 @@ require (
 
 require (
 	github.com/andybalholm/cascadia v1.3.2 // indirect
-	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
