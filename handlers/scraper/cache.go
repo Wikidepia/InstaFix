@@ -17,7 +17,12 @@ func hashStringXXHASH(s string) uint32 {
 }
 
 func InitDB() {
-	db, err := bolt.Open("cache.db", 0600, nil)
+	var boltOptions = &bolt.Options{
+		Timeout:      0,
+		NoGrowSync:   false,
+		FreelistType: bolt.FreelistMapType,
+	}
+	db, err := bolt.Open("cache.db", 0600, boltOptions)
 	if err != nil {
 		panic(err)
 	}
