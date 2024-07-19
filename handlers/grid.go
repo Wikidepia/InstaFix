@@ -14,9 +14,9 @@ import (
 	"time"
 
 	"github.com/RyanCarrier/dijkstra/v2"
-	"github.com/bamiaux/rez"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/image/draw"
 )
 
 var transport = &http.Transport{
@@ -107,7 +107,7 @@ func GenerateGrid(images []image.Image) (image.Image, error) {
 		canvasHeight += rowHeight
 	}
 
-	canvas := image.NewYCbCr(image.Rect(0, 0, canvasWidth, canvasHeight), image.YCbCrSubsampleRatio420)
+	canvas := image.NewRGBA(image.Rect(0, 0, canvasWidth, canvasHeight))
 
 	oldRowHeight := 0
 	for i := 1; i < len(path); i++ {
@@ -116,9 +116,7 @@ func GenerateGrid(images []image.Image) (image.Image, error) {
 		heightRow := heightRows[i-1]
 		for _, imageOne := range inRow {
 			newWidth := float64(heightRow) * float64(imageOne.Bounds().Dx()) / float64(imageOne.Bounds().Dy())
-			if err := rez.Convert(canvas.SubImage(image.Rect(oldImWidth, oldRowHeight, oldImWidth+int(newWidth), oldRowHeight+int(heightRow))), imageOne, rez.NewBilinearFilter()); err != nil {
-				return nil, err
-			}
+			draw.ApproxBiLinear.Scale(canvas, image.Rect(oldImWidth, oldRowHeight, oldImWidth+int(newWidth), oldRowHeight+int(heightRow)), imageOne, imageOne.Bounds(), draw.Src, nil)
 			oldImWidth += int(newWidth)
 		}
 		oldRowHeight += heightRow
