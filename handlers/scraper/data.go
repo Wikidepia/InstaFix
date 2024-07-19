@@ -46,7 +46,7 @@ type InstaData struct {
 }
 
 func GetData(postID string) (*InstaData, error) {
-	if postID[0] != 'C' {
+	if len(postID) == 0 || postID[0] != 'C' {
 		return nil, errors.New("postID is not a valid Instagram post ID")
 	}
 
