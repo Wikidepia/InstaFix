@@ -5,6 +5,7 @@ import (
 	"image/jpeg"
 	scraper "instafix/handlers/scraper"
 	"io"
+	"log/slog"
 	"math"
 	"net/http"
 	"os"
@@ -15,7 +16,6 @@ import (
 
 	"github.com/RyanCarrier/dijkstra/v2"
 	"github.com/go-chi/chi/v5"
-	"github.com/rs/zerolog/log"
 	"golang.org/x/image/draw"
 	"golang.org/x/sync/singleflight"
 )
@@ -169,14 +169,14 @@ func Grid(w http.ResponseWriter, r *http.Request) {
 				// Make request client.Get
 				res, err := client.Do(req)
 				if err != nil {
-					log.Error().Str("postID", postID).Err(err).Msg("Failed to get image")
+					slog.Error("Failed to get image", "postID", postID, "err", err)
 					return
 				}
 				defer res.Body.Close()
 
 				images[i], err = jpeg.Decode(res.Body)
 				if err != nil {
-					log.Error().Str("postID", postID).Err(err).Msg("Failed to decode image")
+					slog.Error("Failed to decode image", "postID", postID, "err", err)
 					return
 				}
 			}(i, mediaURL)

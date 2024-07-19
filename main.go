@@ -6,6 +6,7 @@ import (
 	scraper "instafix/handlers/scraper"
 	"instafix/utils"
 	"instafix/views"
+	"log/slog"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -15,8 +16,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -34,18 +33,18 @@ func main() {
 	// Initialize remote scraper
 	if *remoteScraperAddr != "" {
 		if !strings.HasPrefix(*remoteScraperAddr, "http") {
-			log.Fatal().Msg("Invalid remote scraper address")
+			panic("Remote scraper address must start with http:// or https://")
 		}
 		scraper.RemoteScraperAddr = *remoteScraperAddr
 	}
 
-	// Initialize zerolog
-	zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	// Initialize logging
+	slog.SetLogLoggerLevel(slog.LevelError)
 
 	// Initialize LRU
 	gridCacheMax, err := strconv.Atoi(*gridCacheMaxFlag)
 	if err != nil || gridCacheMax <= 0 {
-		log.Fatal().Err(err).Msg("Failed to parse grid-cache-entries or invalid value")
+		panic(err)
 	}
 	scraper.InitLRU(gridCacheMax)
 
@@ -89,7 +88,7 @@ func main() {
 		views.Home(w)
 	})
 	if err := http.ListenAndServe(*listenAddr, r); err != nil {
-		log.Fatal().Err(err).Msg("Failed to listen")
+		slog.Error("Failed to listen", "err", err)
 	}
 }
 
@@ -113,12 +112,12 @@ func evictCache() {
 					dataBucket.Delete(v)
 				}
 			} else {
-				log.Error().Err(err).Msg("Failed to parse expire timestamp in cache")
+				slog.Error("Failed to parse expire timestamp in cache", "err", err)
 			}
 		}
 		return nil
 	})
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to evict cache")
+		slog.Error("Failed to evict cache", "err", err)
 	}
 }

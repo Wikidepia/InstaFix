@@ -5,6 +5,7 @@ import (
 	"errors"
 	"instafix/utils"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -14,7 +15,6 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/PurpleSec/escape"
 	"github.com/kelindar/binary"
-	"github.com/rs/zerolog/log"
 	"github.com/tdewolff/parse/v2"
 	"github.com/tdewolff/parse/v2/js"
 	"github.com/tidwall/gjson"
@@ -64,7 +64,7 @@ func GetData(postID string) (*InstaData, error) {
 		if err != nil {
 			return err
 		}
-		log.Debug().Str("postID", postID).Msg("Data parsed from cache")
+		slog.Debug("Data parsed from cache", "postID", postID)
 		return nil
 	})
 	if err != nil {
@@ -80,7 +80,7 @@ func GetData(postID string) (*InstaData, error) {
 		item := new(InstaData)
 		item.PostID = postID
 		if err := item.ScrapeData(); err != nil {
-			log.Error().Str("postID", item.PostID).Err(err).Msg("Failed to scrape data from Instagram")
+			slog.Error("Failed to scrape data from Instagram", "postID", item.PostID, "err", err)
 			return nil, err
 		}
 
@@ -88,7 +88,7 @@ func GetData(postID string) (*InstaData, error) {
 		for n, media := range item.Medias {
 			u, err := url.Parse(media.URL)
 			if err != nil {
-				log.Error().Str("postID", item.PostID).Err(err).Msg("Failed to parse media URL")
+				slog.Error("Failed to parse media URL", "postID", item.PostID, "err", err)
 				return false, err
 			}
 			u.Host = "scontent.cdninstagram.com"
@@ -97,7 +97,7 @@ func GetData(postID string) (*InstaData, error) {
 
 		bb, err := binary.Marshal(item)
 		if err != nil {
-			log.Error().Str("postID", item.PostID).Err(err).Msg("Failed to marshal data")
+			slog.Error("Failed to marshal data", "postID", item.PostID, "err", err)
 			return false, err
 		}
 
@@ -117,7 +117,7 @@ func GetData(postID string) (*InstaData, error) {
 			return nil
 		})
 		if err != nil {
-			log.Error().Str("postID", item.PostID).Err(err).Msg("Failed to save data to cache")
+			slog.Error("Failed to save data to cache", "postID", item.PostID, "err", err)
 			return false, err
 		}
 		return item, nil
@@ -143,11 +143,11 @@ func (i *InstaData) ScrapeData() error {
 			iDataGunzip, err := io.ReadAll(res.Body)
 			if err == nil {
 				if err = binary.Unmarshal(iDataGunzip, i); err == nil {
-					log.Info().Str("postID", i.PostID).Msg("Data parsed from remote scraper")
+					slog.Info("Data parsed from remote scraper", "postID", i.PostID)
 					return nil
 				}
 			}
-			log.Error().Str("postID", i.PostID).Int("status", res.StatusCode).Err(err).Msg("Failed to scrape data from remote scraper")
+			slog.Error("Failed to scrape data from remote scraper", "postID", i.PostID, "status", res.StatusCode, "err", err)
 		}
 	}
 
@@ -193,11 +193,11 @@ func (i *InstaData) ScrapeData() error {
 				text = text[1 : len(text)-1]
 				unescapeData := utils.UnescapeJSONString(utils.B2S(text))
 				if !gjson.Valid(unescapeData) {
-					log.Error().Str("postID", i.PostID).Err(err).Msg("Failed to parse data from TimeSliceImpl")
+					slog.Error("Failed to parse data from TimeSliceImpl", "postID", i.PostID, "err", err)
 					return err
 				}
 				timeSliceData = gjson.Parse(unescapeData).Get("gql_data")
-				log.Info().Str("postID", i.PostID).Msg("Data parsed from TimeSliceImpl")
+				slog.Info("Data parsed from TimeSliceImpl", "postID", i.PostID)
 			}
 		}
 	}
@@ -205,7 +205,7 @@ func (i *InstaData) ScrapeData() error {
 	// Scrape from embed HTML
 	embedHTML, err := scrapeFromEmbedHTML(body)
 	if err != nil {
-		log.Error().Str("postID", i.PostID).Err(err).Msg("Failed to parse data from scrapeFromEmbedHTML")
+		slog.Error("Failed to parse data from scrapeFromEmbedHTML", "postID", i.PostID, "err", err)
 		return err
 	}
 	embedData := gjson.Parse(embedHTML)
@@ -218,7 +218,7 @@ func (i *InstaData) ScrapeData() error {
 	if videoBlocked || len(username) == 0 {
 		gqlValue, err := scrapeFromGQL(i.PostID)
 		if err != nil {
-			log.Error().Str("postID", i.PostID).Err(err).Msg("Failed to scrape data from scrapeFromGQL")
+			slog.Error("Failed to scrape data from scrapeFromGQL", "postID", i.PostID, "err", err)
 			return err
 		}
 		gqlData = gjson.Parse(utils.B2S(gqlValue)).Get("data")
@@ -282,7 +282,7 @@ func (i *InstaData) ScrapeData() error {
 	if len(username) == 0 {
 		return ErrNotFound
 	}
-	log.Info().Str("postID", i.PostID).Msg("Data scraped from embedHTML")
+	slog.Info("Data scraped from embedHTML", "postID", i.PostID)
 	return nil
 }
 
