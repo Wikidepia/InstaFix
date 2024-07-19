@@ -9,8 +9,12 @@ import (
 )
 
 func OEmbed(w http.ResponseWriter, r *http.Request) {
-	headingText := r.URL.Query().Get("text")
-	headingURL := r.URL.Query().Get("url")
+	urlQuery := r.URL.Query()
+	if urlQuery == nil {
+		return
+	}
+	headingText := urlQuery.Get("text")
+	headingURL := urlQuery.Get("url")
 	if headingText == "" || headingURL == "" {
 		return
 	}
