@@ -141,7 +141,7 @@ func (i *InstaData) ScrapeData() error {
 		if err != nil {
 			return err
 		}
-		req.Header.Set("Accept-Encoding", "zstd")
+		req.Header.Set("Accept-Encoding", "zstd.dict")
 		res, err := client.Do(req)
 		if res != nil && res.StatusCode == 200 {
 			defer res.Body.Close()
