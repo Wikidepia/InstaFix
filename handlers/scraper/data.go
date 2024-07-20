@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	_ "embed"
 	"errors"
 	"instafix/utils"
 	"io"
@@ -15,6 +16,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/PurpleSec/escape"
 	"github.com/kelindar/binary"
+	"github.com/klauspost/compress/zstd"
 	"github.com/tdewolff/parse/v2"
 	"github.com/tdewolff/parse/v2/js"
 	"github.com/tidwall/gjson"
@@ -23,15 +25,16 @@ import (
 	"golang.org/x/sync/singleflight"
 )
 
-var timeout = 10 * time.Second
-
 var (
+	timeout     = 10 * time.Second
 	ErrNotFound = errors.New("post not found")
 )
 
 var RemoteScraperAddr string
-
 var sflightScraper singleflight.Group
+
+//go:embed dictionary.bin
+var zstdDict []byte
 
 type Media struct {
 	TypeName string
@@ -138,12 +141,21 @@ func (i *InstaData) ScrapeData() error {
 		if err != nil {
 			return err
 		}
+		req.Header.Set("Accept-Encoding", "zstd")
 		res, err := client.Do(req)
 		if res != nil && res.StatusCode == 200 {
 			defer res.Body.Close()
-			iDataGunzip, err := io.ReadAll(res.Body)
+			zstdReader, err := zstd.NewReader(nil, zstd.WithDecoderLowmem(true), zstd.WithDecoderDicts(zstdDict))
+			if err != nil {
+				return err
+			}
+			remoteData, err := io.ReadAll(res.Body)
 			if err == nil {
-				if err = binary.Unmarshal(iDataGunzip, i); err == nil {
+				remoteDecomp, err := zstdReader.DecodeAll(remoteData, nil)
+				if err != nil {
+					return err
+				}
+				if err = binary.Unmarshal(remoteDecomp, i); err == nil {
 					slog.Info("Data parsed from remote scraper", "postID", i.PostID)
 					return nil
 				}

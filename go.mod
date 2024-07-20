@@ -12,6 +12,7 @@ require (
 	github.com/elastic/go-freelru v0.13.0
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/kelindar/binary v1.0.19
+	github.com/klauspost/compress v1.17.9
 	github.com/tdewolff/parse/v2 v2.7.15
 	github.com/tidwall/gjson v1.17.1
 	go.etcd.io/bbolt v1.3.10
