@@ -181,71 +181,71 @@ func (i *InstaData) ScrapeData() error {
 		}
 	}
 
-	// Pattern matching using LDE
-	l := &Line{}
-
-	// TimeSliceImpl
-	ldeMatch := false
-	for _, line := range bytes.Split(body, []byte("\n")) {
-		// Check if line contains TimeSliceImpl
-		ldeMatch, _ = l.Extract(line)
-	}
-
+	var embedData gjson.Result
 	var timeSliceData gjson.Result
-	if ldeMatch {
-		lexer := js.NewLexer(parse.NewInputBytes(l.GetTimeSliceImplValue()))
-		for {
-			tt, text := lexer.Next()
-			if tt == js.ErrorToken || text == nil {
-				break
-			}
-			if tt == js.StringToken && bytes.Contains(text, []byte("shortcode_media")) {
-				// Strip quotes from start and end
-				text = text[1 : len(text)-1]
-				unescapeData := utils.UnescapeJSONString(utils.B2S(text))
-				if !gjson.Valid(unescapeData) {
-					slog.Error("Failed to parse data from TimeSliceImpl", "postID", i.PostID, "err", err)
-					return err
+	if len(body) > 0 {
+		// Pattern matching using LDE
+		l := &Line{}
+
+		// TimeSliceImpl
+		ldeMatch := false
+		for _, line := range bytes.Split(body, []byte("\n")) {
+			// Check if line contains TimeSliceImpl
+			ldeMatch, _ = l.Extract(line)
+		}
+
+		if ldeMatch {
+			lexer := js.NewLexer(parse.NewInputBytes(l.GetTimeSliceImplValue()))
+			for {
+				tt, text := lexer.Next()
+				if tt == js.ErrorToken || text == nil {
+					break
 				}
-				timeSliceData = gjson.Parse(unescapeData).Get("gql_data")
-				slog.Info("Data parsed from TimeSliceImpl", "postID", i.PostID)
+				if tt == js.StringToken && bytes.Contains(text, []byte("shortcode_media")) {
+					// Strip quotes from start and end
+					text = text[1 : len(text)-1]
+					unescapeData := utils.UnescapeJSONString(utils.B2S(text))
+					if !gjson.Valid(unescapeData) {
+						slog.Error("Failed to parse data from TimeSliceImpl", "postID", i.PostID, "err", err)
+						return err
+					}
+					timeSliceData = gjson.Parse(unescapeData).Get("gql_data")
+				}
 			}
 		}
-	}
 
-	// Scrape from embed HTML
-	embedHTML, err := scrapeFromEmbedHTML(body)
-	if err != nil {
-		slog.Error("Failed to parse data from scrapeFromEmbedHTML", "postID", i.PostID, "err", err)
-		return err
+		// Scrape from embed HTML
+		embedHTML, err := scrapeFromEmbedHTML(body)
+		if err != nil {
+			slog.Error("Failed to parse data from scrapeFromEmbedHTML", "postID", i.PostID, "err", err)
+			return err
+		}
+		embedData = gjson.Parse(embedHTML)
 	}
-	embedData := gjson.Parse(embedHTML)
-	smedia := embedData.Get("shortcode_media")
-	videoBlocked := smedia.Get("video_blocked").Bool()
-	username := smedia.Get("owner.username").String()
 
 	var gqlData gjson.Result
-	// Scrape from GraphQL API
-	if videoBlocked || len(username) == 0 {
+	videoBlocked := strings.Contains(utils.B2S(body), "WatchOnInstagram")
+	// Scrape from GraphQL API only if video is blocked or embed data is empty
+	if videoBlocked || len(body) == 0 {
 		gqlValue, err := scrapeFromGQL(i.PostID)
 		if err != nil {
 			slog.Error("Failed to scrape data from scrapeFromGQL", "postID", i.PostID, "err", err)
 			return err
 		}
-		gqlData = gjson.Parse(utils.B2S(gqlValue)).Get("data")
-	} else {
-		if timeSliceData.Exists() {
-			gqlData = timeSliceData
-		} else {
-			gqlData = embedData
+		if !strings.Contains(utils.B2S(gqlValue), "require_login") {
+			gqlData = gjson.Parse(utils.B2S(gqlValue)).Get("data")
+			slog.Info("Data parsed from GraphQL API", "postID", i.PostID)
 		}
 	}
 
 	// If gqlData is blocked, use timeSliceData or embedData
-	if gqlData.Get("require_login").Bool() {
-		gqlData = timeSliceData
-		if !timeSliceData.Exists() {
+	if !gqlData.Exists() {
+		if timeSliceData.Exists() {
+			gqlData = timeSliceData
+			slog.Info("Data parsed from TimeSliceImpl", "postID", i.PostID)
+		} else {
 			gqlData = embedData
+			slog.Info("Data parsed from embedHTML", "postID", i.PostID)
 		}
 	}
 
@@ -290,10 +290,9 @@ func (i *InstaData) ScrapeData() error {
 	}
 
 	// Failed to scrape from Embed
-	if len(username) == 0 {
+	if len(i.Medias) == 0 {
 		return ErrNotFound
 	}
-	slog.Info("Data scraped from embedHTML", "postID", i.PostID)
 	return nil
 }
 
