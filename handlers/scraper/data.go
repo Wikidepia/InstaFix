@@ -16,6 +16,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/PurpleSec/escape"
 	"github.com/kelindar/binary"
+	"github.com/klauspost/compress/gzhttp"
 	"github.com/klauspost/compress/zstd"
 	"github.com/tdewolff/parse/v2"
 	"github.com/tdewolff/parse/v2/js"
@@ -28,6 +29,7 @@ import (
 var (
 	timeout     = 10 * time.Second
 	ErrNotFound = errors.New("post not found")
+	transport   = gzhttp.Transport(http.DefaultTransport, gzhttp.TransportAlwaysDecompress(true))
 )
 
 var RemoteScraperAddr string
@@ -132,7 +134,7 @@ func GetData(postID string) (*InstaData, error) {
 }
 
 func (i *InstaData) ScrapeData() error {
-	client := http.Client{Timeout: timeout}
+	client := http.Client{Transport: transport, Timeout: timeout}
 
 	// Scrape from remote scraper if available
 	if len(RemoteScraperAddr) > 0 {
@@ -418,7 +420,7 @@ func scrapeFromGQL(postID string) ([]byte, error) {
 		"X-Ig-App-Id":                 {"936619743392459"},
 	}
 
-	client := http.Client{Timeout: timeout}
+	client := http.Client{Transport: transport, Timeout: timeout}
 	res, err := client.Do(req)
 	if err != nil || res == nil {
 		return nil, err
