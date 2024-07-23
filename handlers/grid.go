@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"math"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -21,6 +22,18 @@ import (
 )
 
 var timeout = 60 * time.Second
+var transport = &http.Transport{
+	Proxy: nil, // Skip any proxy
+	DialContext: (&net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+	}).DialContext,
+	ForceAttemptHTTP2:     true,
+	MaxIdleConns:          100,
+	IdleConnTimeout:       90 * time.Second,
+	TLSHandshakeTimeout:   10 * time.Second,
+	ExpectContinueTimeout: 1 * time.Second,
+}
 var sflightGrid singleflight.Group
 
 // getHeight returns the height of the rows, imagesWH [w,h]
@@ -160,7 +173,7 @@ func Grid(w http.ResponseWriter, r *http.Request) {
 
 			go func(i int, url string) {
 				defer wg.Done()
-				client := http.Client{Timeout: timeout}
+				client := http.Client{Transport: transport, Timeout: timeout}
 				req, err := http.NewRequest(http.MethodGet, url, http.NoBody)
 				if err != nil {
 					return
