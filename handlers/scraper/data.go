@@ -230,9 +230,8 @@ func (i *InstaData) ScrapeData() error {
 		gqlValue, err := scrapeFromGQL(i.PostID)
 		if err != nil {
 			slog.Error("Failed to scrape data from scrapeFromGQL", "postID", i.PostID, "err", err)
-			return err
 		}
-		if !strings.Contains(utils.B2S(gqlValue), "require_login") {
+		if gqlValue != nil && !strings.Contains(utils.B2S(gqlValue), "require_login") {
 			gqlData = gjson.Parse(utils.B2S(gqlValue)).Get("data")
 			slog.Info("Data parsed from GraphQL API", "postID", i.PostID)
 		}
