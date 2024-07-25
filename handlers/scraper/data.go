@@ -27,13 +27,13 @@ import (
 )
 
 var (
-	timeout     = 10 * time.Second
-	ErrNotFound = errors.New("post not found")
-	transport   = gzhttp.Transport(http.DefaultTransport, gzhttp.TransportAlwaysDecompress(true))
+	RemoteScraperAddr string
+	ErrNotFound       = errors.New("post not found")
+	timeout           = 5 * time.Second
+	transport         http.RoundTripper
+	transportNoProxy  *http.Transport
+	sflightScraper    singleflight.Group
 )
-
-var RemoteScraperAddr string
-var sflightScraper singleflight.Group
 
 //go:embed dictionary.bin
 var zstdDict []byte
@@ -48,6 +48,12 @@ type InstaData struct {
 	Username string
 	Caption  string
 	Medias   []Media
+}
+
+func init() {
+	transport = gzhttp.Transport(http.DefaultTransport, gzhttp.TransportAlwaysDecompress(true))
+	transportNoProxy = http.DefaultTransport.(*http.Transport).Clone()
+	transportNoProxy.Proxy = nil // Skip any proxy
 }
 
 func GetData(postID string) (*InstaData, error) {
@@ -134,17 +140,16 @@ func GetData(postID string) (*InstaData, error) {
 }
 
 func (i *InstaData) ScrapeData() error {
-	client := http.Client{Transport: transport, Timeout: timeout}
-
 	// Scrape from remote scraper if available
 	if len(RemoteScraperAddr) > 0 {
 		var err error
+		remoteClient := http.Client{Transport: transportNoProxy, Timeout: timeout}
 		req, err := http.NewRequest("GET", RemoteScraperAddr+"/scrape/"+i.PostID, nil)
 		if err != nil {
 			return err
 		}
 		req.Header.Set("Accept-Encoding", "zstd.dict")
-		res, err := client.Do(req)
+		res, err := remoteClient.Do(req)
 		if res != nil && res.StatusCode == 200 {
 			defer res.Body.Close()
 			zstdReader, err := zstd.NewReader(nil, zstd.WithDecoderLowmem(true), zstd.WithDecoderDicts(zstdDict))
@@ -166,6 +171,7 @@ func (i *InstaData) ScrapeData() error {
 		}
 	}
 
+	client := http.Client{Transport: transport, Timeout: timeout}
 	req, err := http.NewRequest("GET", "https://www.instagram.com/p/"+i.PostID+"/embed/captioned/", nil)
 	if err != nil {
 		return err
