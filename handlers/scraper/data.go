@@ -225,10 +225,10 @@ func (i *InstaData) ScrapeData() error {
 		// Scrape from embed HTML
 		embedHTML, err := scrapeFromEmbedHTML(body)
 		if err != nil {
-			slog.Error("Failed to parse data from scrapeFromEmbedHTML", "postID", i.PostID, "err", err)
-			return err
+			slog.Warn("Failed to parse data from scrapeFromEmbedHTML", "postID", i.PostID, "err", err)
+		} else {
+			embedData = gjson.Parse(embedHTML)
 		}
-		embedData = gjson.Parse(embedHTML)
 	}
 
 	var gqlData gjson.Result
@@ -261,11 +261,10 @@ func (i *InstaData) ScrapeData() error {
 	if !item.Exists() {
 		item = gqlData.Get("xdt_shortcode_media")
 		if !item.Exists() {
-			if status == "ok" {
-				return ErrNotFound
-			} else if status == "fail" {
+			if status == "fail" {
 				return errors.New("scrapeFromGQL is blocked")
 			}
+			return ErrNotFound
 		}
 	}
 
@@ -341,7 +340,10 @@ func scrapeFromEmbedHTML(embedHTML []byte) (string, error) {
 		typename = "GraphVideo"
 		embedMedia = doc.Find(".EmbeddedMediaVideo")
 	}
-	mediaURL, _ := embedMedia.Attr("src")
+	mediaURL, ok := embedMedia.Attr("src")
+	if !ok {
+		return "", ErrNotFound
+	}
 
 	// Get username
 	username := doc.Find(".UsernameText").Text()
