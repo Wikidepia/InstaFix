@@ -163,8 +163,10 @@ func (i *InstaData) ScrapeData() error {
 					return err
 				}
 				if err = binary.Unmarshal(remoteDecomp, i); err == nil {
-					slog.Info("Data parsed from remote scraper", "postID", i.PostID)
-					return nil
+					if len(i.Username) > 0 {
+						slog.Info("Data parsed from remote scraper", "postID", i.PostID)
+						return nil
+					}
 				}
 			}
 			slog.Error("Failed to scrape data from remote scraper", "postID", i.PostID, "status", res.StatusCode, "err", err)
