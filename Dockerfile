@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.22 as app-builder
+FROM --platform=$BUILDPLATFORM golang:1.22 as app-builder
 
 # Set destination for COPY
 WORKDIR /app
@@ -19,8 +19,12 @@ RUN true
 COPY utils/ ./utils/
 COPY views/ ./views/
 
+# This is the architecture you’re building for, which is passed in by the builder.
+# Placing it here allows the previous steps to be cached across architectures.
+ARG TARGETARCH
+
 # Build
-RUN GOOS=linux go build -tags netgo,osusergo -ldflags '-extldflags "-static"'
+RUN GOOS=linux GOARCH=$TARGETARCH go build -tags netgo,osusergo -ldflags '-extldflags "-static"'
 
 # Run in scratch container
 FROM scratch
