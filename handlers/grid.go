@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"image"
 	"image/jpeg"
 	scraper "instafix/handlers/scraper"
@@ -134,20 +135,23 @@ func Grid(w http.ResponseWriter, r *http.Request) {
 	postID := chi.URLParam(r, "postID")
 	gridFname := filepath.Join("static", postID+".jpeg")
 
-	// If already exists, return
+	// If already exists, return from cache
 	if _, ok := scraper.LRU.Get(gridFname); ok {
 		f, err := os.Open(gridFname)
-		if err != nil {
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		} else if err == nil {
+			defer f.Close()
+			w.Header().Set("Content-Type", "image/jpeg")
+			io.Copy(w, f)
 			return
 		}
-		defer f.Close()
-		w.Header().Set("Content-Type", "image/jpeg")
-		io.Copy(w, f)
-		return
 	}
 
 	item, err := scraper.GetData(postID)
 	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -217,11 +221,13 @@ func Grid(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	f, err := os.Open(gridFname)
 	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	defer f.Close()
