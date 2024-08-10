@@ -87,6 +87,8 @@ func main() {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		views.Home(w)
 	})
+
+	println("Starting up on", *listenAddr)
 	if err := http.ListenAndServe(*listenAddr, r); err != nil {
 		slog.Error("Failed to listen", "err", err)
 	}
