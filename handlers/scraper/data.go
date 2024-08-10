@@ -33,6 +33,7 @@ var (
 	transport         http.RoundTripper
 	transportNoProxy  *http.Transport
 	sflightScraper    singleflight.Group
+	remoteZSTDReader  *zstd.Decoder
 )
 
 //go:embed dictionary.bin
@@ -51,9 +52,15 @@ type InstaData struct {
 }
 
 func init() {
+	var err error
 	transport = gzhttp.Transport(http.DefaultTransport, gzhttp.TransportAlwaysDecompress(true))
 	transportNoProxy = http.DefaultTransport.(*http.Transport).Clone()
 	transportNoProxy.Proxy = nil // Skip any proxy
+
+	remoteZSTDReader, err = zstd.NewReader(nil, zstd.WithDecoderLowmem(true), zstd.WithDecoderDicts(zstdDict))
+	if err != nil {
+		panic(err)
+	}
 }
 
 func GetData(postID string) (*InstaData, error) {
@@ -152,13 +159,12 @@ func (i *InstaData) ScrapeData() error {
 		res, err := remoteClient.Do(req)
 		if res != nil && res.StatusCode == 200 {
 			defer res.Body.Close()
-			zstdReader, err := zstd.NewReader(nil, zstd.WithDecoderLowmem(true), zstd.WithDecoderDicts(zstdDict))
 			if err != nil {
 				return err
 			}
 			remoteData, err := io.ReadAll(res.Body)
 			if err == nil {
-				remoteDecomp, err := zstdReader.DecodeAll(remoteData, nil)
+				remoteDecomp, err := remoteZSTDReader.DecodeAll(remoteData, nil)
 				if err != nil {
 					return err
 				}
