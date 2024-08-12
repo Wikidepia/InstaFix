@@ -125,9 +125,13 @@ func Embed(w http.ResponseWriter, r *http.Request) {
 		sb.WriteString("/")
 		sb.WriteString(strconv.Itoa(max(1, mediaNum)))
 		viewsData.VideoURL = sb.String()
-		viewsData.OEmbedURL = r.Host + "/oembed?text=" + url.QueryEscape(viewsData.Description) + "&url=" + viewsData.URL
-	}
 
+		scheme := "http"
+		if r.TLS != nil {
+			scheme = "https"
+		}
+		viewsData.OEmbedURL = scheme + "://" + r.Host + "/oembed?text=" + url.QueryEscape(viewsData.Description) + "&url=" + viewsData.URL
+	}
 	if isDirect {
 		http.Redirect(w, r, sb.String(), http.StatusFound)
 		return
