@@ -107,6 +107,9 @@ func GenerateGrid(images []image.Image) (image.Image, error) {
 	var heightRows []int
 	// Calculate height of each row and canvas height
 	for i := 1; i < len(path); i++ {
+		if len(imagesWH) < path[i-1] {
+			return nil, errors.New("imagesWH is not long enough")
+		}
 		rowWH := imagesWH[path[i-1]:path[i]]
 
 		rowHeight := int(getHeight(rowWH, canvasWidth))
@@ -120,6 +123,9 @@ func GenerateGrid(images []image.Image) (image.Image, error) {
 	for i := 1; i < len(path); i++ {
 		inRow := images[path[i-1]:path[i]]
 		oldImWidth := 0
+		if len(heightRows) < i {
+			return nil, errors.New("heightRows is not long enough")
+		}
 		heightRow := heightRows[i-1]
 		for _, imageOne := range inRow {
 			newWidth := float64(heightRow) * float64(imageOne.Bounds().Dx()) / float64(imageOne.Bounds().Dy())
