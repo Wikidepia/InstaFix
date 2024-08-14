@@ -250,14 +250,14 @@ func (i *InstaData) ScrapeData() error {
 	}
 
 	var gqlData gjson.Result
-	videoBlocked := strings.Contains(utils.B2S(body), "WatchOnInstagram")
+	videoBlocked := bytes.Contains(body, []byte("WatchOnInstagram"))
 	// Scrape from GraphQL API only if video is blocked or embed data is empty
 	if videoBlocked || len(body) == 0 {
 		gqlValue, err := scrapeFromGQL(i.PostID)
 		if err != nil {
 			slog.Error("Failed to scrape data from scrapeFromGQL", "postID", i.PostID, "err", err)
 		}
-		if gqlValue != nil && !strings.Contains(utils.B2S(gqlValue), "require_login") {
+		if gqlValue != nil && !bytes.Contains(gqlValue, []byte("require_login")) {
 			gqlData = gjson.Parse(utils.B2S(gqlValue)).Get("data")
 			slog.Info("Data parsed from GraphQL API", "postID", i.PostID)
 		}
