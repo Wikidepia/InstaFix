@@ -149,7 +149,6 @@ func GetData(postID string) (*InstaData, error) {
 func (i *InstaData) ScrapeData() error {
 	// Scrape from remote scraper if available
 	if len(RemoteScraperAddr) > 0 {
-		var err error
 		remoteClient := http.Client{Transport: transportNoProxy, Timeout: timeout}
 		req, err := http.NewRequest("GET", RemoteScraperAddr+"/scrape/"+i.PostID, nil)
 		if err != nil {
@@ -157,18 +156,15 @@ func (i *InstaData) ScrapeData() error {
 		}
 		req.Header.Set("Accept-Encoding", "zstd.dict")
 		res, err := remoteClient.Do(req)
-		if res != nil && res.StatusCode == 200 {
+		if err == nil && res != nil {
 			defer res.Body.Close()
-			if err != nil {
-				return err
-			}
 			remoteData, err := io.ReadAll(res.Body)
-			if err == nil {
+			if err == nil && res.StatusCode == 200 {
 				remoteDecomp, err := remoteZSTDReader.DecodeAll(remoteData, nil)
 				if err != nil {
 					return err
 				}
-				if err = binary.Unmarshal(remoteDecomp, i); err == nil {
+				if err := binary.Unmarshal(remoteDecomp, i); err == nil {
 					if len(i.Username) > 0 {
 						slog.Info("Data parsed from remote scraper", "postID", i.PostID)
 						return nil
@@ -177,6 +173,7 @@ func (i *InstaData) ScrapeData() error {
 			}
 			slog.Error("Failed to scrape data from remote scraper", "postID", i.PostID, "status", res.StatusCode, "err", err)
 		}
+		slog.Error("Failed when trying to scrape data from remote scraper", "postID", i.PostID, "err", err)
 	}
 
 	client := http.Client{Transport: transport, Timeout: timeout}
