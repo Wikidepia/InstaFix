@@ -187,13 +187,24 @@ func (i *InstaData) ScrapeData() error {
 
 	var body []byte
 	for retries := 0; retries < 3; retries++ {
-		res, err := client.Do(req)
-		if res != nil && res.StatusCode == 200 {
-			defer res.Body.Close()
-			body, err = io.ReadAll(res.Body)
-			if err == nil && len(body) > 0 {
-				break
+		err := func() error {
+			res, err := client.Do(req)
+			if err != nil {
+				return err
 			}
+			defer res.Body.Close()
+			if res.StatusCode != 200 {
+				return errors.New("status code is not 200")
+			}
+
+			body, err = io.ReadAll(res.Body)
+			if err != nil {
+				return err
+			}
+			return nil
+		}()
+		if err == nil {
+			break
 		}
 	}
 
