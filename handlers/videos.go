@@ -3,11 +3,27 @@ package handlers
 import (
 	scraper "instafix/handlers/scraper"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
 )
+
+var videoProxy string
+
+func init() {
+	videoProxy = os.Getenv("VIDEO_PROXY")
+	if videoProxy == "" {
+		return
+	}
+	if !(strings.HasPrefix(videoProxy, "http://") || strings.HasPrefix(videoProxy, "https://")) {
+		panic("VIDEO_PROXY must start with http:// or https://")
+	}
+	if !strings.HasSuffix(videoProxy, "/") {
+		videoProxy += "/"
+	}
+}
 
 func Videos(w http.ResponseWriter, r *http.Request) {
 	postID := chi.URLParam(r, "postID")
@@ -34,6 +50,6 @@ func Videos(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, videoURL, http.StatusFound)
 		return
 	}
-	http.Redirect(w, r, "https://envoy.lol/"+videoURL, http.StatusFound)
+	http.Redirect(w, r, videoProxy+videoURL, http.StatusFound)
 	return
 }
