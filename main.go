@@ -27,7 +27,8 @@ func init() {
 func main() {
 	listenAddr := flag.String("listen", "0.0.0.0:3000", "Address to listen on")
 	gridCacheMaxFlag := flag.String("grid-cache-entries", "1024", "Maximum number of grid images to cache")
-	remoteScraperAddr := flag.String("remote-scraper", "", "Remote scraper address")
+	remoteScraperAddr := flag.String("remote-scraper", "", "Remote scraper address (https://github.com/Wikidepia/InstaFix-remote-scraper)")
+	videoProxyAddr := flag.String("video-proxy-addr", "", "Video proxy address (https://github.com/Wikidepia/InstaFix-proxy)")
 	flag.Parse()
 
 	// Initialize remote scraper
@@ -36,6 +37,17 @@ func main() {
 			panic("Remote scraper address must start with http:// or https://")
 		}
 		scraper.RemoteScraperAddr = *remoteScraperAddr
+	}
+
+	// Initialize video proxy
+	if *videoProxyAddr != "" {
+		if !strings.HasPrefix(*videoProxyAddr, "http") {
+			panic("Video proxy address must start with http:// or https://")
+		}
+		handlers.VideoProxyAddr = *videoProxyAddr
+		if !strings.HasSuffix(handlers.VideoProxyAddr, "/") {
+			handlers.VideoProxyAddr += "/"
+		}
 	}
 
 	// Initialize logging
