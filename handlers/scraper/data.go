@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/PurpleSec/escape"
 	"github.com/kelindar/binary"
 	"github.com/klauspost/compress/gzhttp"
 	"github.com/klauspost/compress/zstd"
@@ -385,7 +384,7 @@ func scrapeFromEmbedHTML(embedHTML []byte) (string, error) {
 		"shortcode_media": {
 			"owner": {"username": "` + username + `"},
 			"node": {"__typename": "` + typename + `", "display_url": "` + mediaURL + `"},
-			"edge_media_to_caption": {"edges": [{"node": {"text": ` + escape.JSON(caption) + `}}]},
+			"edge_media_to_caption": {"edges": [{"node": {"text": ` + utils.EscapeJSONString(caption) + `}}]},
 			"dimensions": {"height": null, "width": null},
 			"video_blocked": ` + videoBlocked + `
 		}

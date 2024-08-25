@@ -1,11 +1,10 @@
 package handlers
 
 import (
+	"instafix/utils"
 	"instafix/views"
 	"instafix/views/model"
 	"net/http"
-
-	"github.com/PurpleSec/escape"
 )
 
 func OEmbed(w http.ResponseWriter, r *http.Request) {
@@ -22,7 +21,7 @@ func OEmbed(w http.ResponseWriter, r *http.Request) {
 
 	// Totally safe 100% valid template 👍
 	OEmbedData := &model.OEmbedData{
-		Text: escape.JSON(headingText),
+		Text: utils.EscapeJSONString(headingText),
 		URL:  headingURL,
 	}
 
