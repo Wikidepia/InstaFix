@@ -239,5 +239,4 @@ func Grid(w http.ResponseWriter, r *http.Request) {
 	defer f.Close()
 	w.Header().Set("Content-Type", "image/jpeg")
 	io.Copy(w, f)
-	return
 }

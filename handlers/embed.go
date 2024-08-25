@@ -138,5 +138,4 @@ func Embed(w http.ResponseWriter, r *http.Request) {
 	}
 
 	views.Embed(viewsData, w)
-	return
 }

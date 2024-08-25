@@ -37,5 +37,4 @@ func Videos(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, VideoProxyAddr+videoURL, http.StatusFound)
-	return
 }

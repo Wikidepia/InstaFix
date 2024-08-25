@@ -28,5 +28,4 @@ func Images(w http.ResponseWriter, r *http.Request) {
 	}
 	imageURL := item.Medias[max(1, mediaNum)-1].URL
 	http.Redirect(w, r, imageURL, http.StatusFound)
-	return
 }

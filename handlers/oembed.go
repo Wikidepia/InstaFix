@@ -27,5 +27,4 @@ func OEmbed(w http.ResponseWriter, r *http.Request) {
 	}
 
 	views.OEmbed(OEmbedData, w)
-	return
 }
