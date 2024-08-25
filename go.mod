@@ -1,12 +1,9 @@
 module instafix
 
-go 1.22
-
-toolchain go1.22.4
+go 1.23
 
 require (
 	github.com/PuerkitoBio/goquery v1.9.2
-	github.com/PurpleSec/escape v1.0.0
 	github.com/RyanCarrier/dijkstra/v2 v2.0.2
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/elastic/go-freelru v0.13.0
