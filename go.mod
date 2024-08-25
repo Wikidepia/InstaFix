@@ -15,7 +15,7 @@ require (
 	github.com/klauspost/compress v1.17.10-0.20240719110028-cfab8bd586ec
 	github.com/tdewolff/parse/v2 v2.7.15
 	github.com/tidwall/gjson v1.17.3
-	go.etcd.io/bbolt v1.3.10
+	go.etcd.io/bbolt v1.3.11
 	golang.org/x/image v0.19.0
 	golang.org/x/net v0.28.0
 	golang.org/x/sync v0.8.0
