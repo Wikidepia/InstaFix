@@ -63,7 +63,7 @@ func init() {
 }
 
 func GetData(postID string) (*InstaData, error) {
-	if len(postID) == 0 || postID[0] != 'C' {
+	if len(postID) == 0 || (postID[0] != 'C' && postID[0] != 'D') {
 		return nil, errors.New("postID is not a valid Instagram post ID")
 	}
 
