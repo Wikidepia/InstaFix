@@ -209,18 +209,22 @@ func (i *InstaData) ScrapeData() error {
 	var embedData gjson.Result
 	var timeSliceData gjson.Result
 	if len(body) > 0 {
-		// Pattern matching using LDE
-		l := &Line{}
+		var scriptText []byte
 
-		// TimeSliceImpl
-		ldeMatch := false
+		// TimeSliceImpl (very fragile)
 		for _, line := range bytes.Split(body, []byte("\n")) {
-			// Check if line contains TimeSliceImpl
-			ldeMatch, _ = l.Extract(line)
+			if bytes.Contains(line, []byte("shortcode_media")) {
+				scriptText = line
+				break
+			}
 		}
 
-		if ldeMatch {
-			lexer := js.NewLexer(parse.NewInputBytes(l.GetTimeSliceImplValue()))
+		if len(scriptText) > 0 {
+			// Remove <script>
+			findFirstMoreThan := bytes.Index(scriptText, []byte(">"))
+			scriptText = scriptText[findFirstMoreThan+1:]
+
+			lexer := js.NewLexer(parse.NewInputBytes(scriptText))
 			for {
 				tt, text := lexer.Next()
 				if tt == js.ErrorToken || text == nil {
@@ -237,6 +241,8 @@ func (i *InstaData) ScrapeData() error {
 					timeSliceData = gjson.Parse(unescapeData).Get("gql_data")
 				}
 			}
+		} else {
+			slog.Warn("Failed to parse data from TimeSliceImpl", "postID", i.PostID, "err", "No script found")
 		}
 
 		// Scrape from embed HTML
