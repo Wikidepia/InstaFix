@@ -5,8 +5,10 @@ import (
 	"instafix/utils"
 	"instafix/views"
 	"instafix/views/model"
+	"log/slog"
 	"net/http"
 	"net/url"
+	"path"
 	"strconv"
 	"strings"
 
@@ -24,6 +26,24 @@ func mediaidToCode(mediaID int) string {
 	}
 
 	return shortCode
+}
+
+func getSharePostID(postID string) (string, error) {
+	req, err := http.NewRequest("HEAD", "https://www.instagram.com/share/reel/"+postID+"/", nil)
+	if err != nil {
+		return "", err
+	}
+	resp, err := http.DefaultTransport.RoundTrip(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	redirURL, err := url.Parse(resp.Header.Get("Location"))
+	if err != nil {
+		return "", err
+	}
+	postID = path.Base(redirURL.Path)
+	return postID, nil
 }
 
 func Embed(w http.ResponseWriter, r *http.Request) {
@@ -72,6 +92,14 @@ func Embed(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		postID = mediaidToCode(mediaID)
+	} else if strings.Contains(r.URL.Path, "/share/") {
+		postID, err = getSharePostID(postID)
+		if err != nil {
+			slog.Error("Failed to get new postID from share URL", "postID", postID, "err", err)
+			viewsData.Description = "Failed to get new postID from share URL"
+			views.Embed(viewsData, w)
+			return
+		}
 	}
 
 	// If User-Agent is not bot, redirect to Instagram

@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -66,24 +65,6 @@ func init() {
 func GetData(postID string) (*InstaData, error) {
 	if len(postID) == 0 || (postID[0] != 'C' && postID[0] != 'D' && postID[0] != 'B') {
 		return nil, errors.New("postID is not a valid Instagram post ID")
-	}
-
-	// Shortened postID
-	if postID[0] == 'B' {
-		req, err := http.NewRequest("HEAD", "https://www.instagram.com/share/reel/"+postID+"/", nil)
-		if err != nil {
-			return nil, err
-		}
-		resp, err := http.DefaultTransport.RoundTrip(req)
-		if err != nil {
-			return nil, err
-		}
-		defer resp.Body.Close()
-		redirURL, err := url.Parse(resp.Header.Get("Location"))
-		if err != nil {
-			return nil, err
-		}
-		postID = path.Base(redirURL.Path)
 	}
 
 	i := &InstaData{PostID: postID}
