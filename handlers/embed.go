@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	scraper "instafix/handlers/scraper"
 	"instafix/utils"
 	"instafix/views"
@@ -31,18 +32,21 @@ func mediaidToCode(mediaID int) string {
 func getSharePostID(postID string) (string, error) {
 	req, err := http.NewRequest("HEAD", "https://www.instagram.com/share/reel/"+postID+"/", nil)
 	if err != nil {
-		return "", err
+		return postID, err
 	}
 	resp, err := http.DefaultTransport.RoundTrip(req)
 	if err != nil {
-		return "", err
+		return postID, err
 	}
 	defer resp.Body.Close()
 	redirURL, err := url.Parse(resp.Header.Get("Location"))
 	if err != nil {
-		return "", err
+		return postID, err
 	}
 	postID = path.Base(redirURL.Path)
+	if postID == "login" {
+		return postID, errors.New("not logged in")
+	}
 	return postID, nil
 }
 
