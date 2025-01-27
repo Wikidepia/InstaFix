@@ -114,8 +114,7 @@ func handleConnection(conn net.Conn) {
 				}
 
 				if rm.instaData.Username == "" {
-					slog.Error("failed to get post ID", "err", err)
-					rm.outChan <- err
+					rm.outChan <- errors.New("remote scraper returns empty data")
 					return
 				}
 				rm.outChan <- nil
