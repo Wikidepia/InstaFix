@@ -7,6 +7,7 @@ import (
 	"instafix/utils"
 	"instafix/views"
 	"log/slog"
+	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -28,6 +29,8 @@ func main() {
 	listenAddr := flag.String("listen", "0.0.0.0:3000", "Address to listen on")
 	gridCacheMaxFlag := flag.String("grid-cache-entries", "1024", "Maximum number of grid images to cache")
 	videoProxyAddr := flag.String("video-proxy-addr", "", "Video proxy address (https://github.com/Wikidepia/InstaFix-proxy)")
+	remoteAddr := flag.String("remote-scraper-addr", "0.0.0.0:3001", "Address of remote scraper")
+	authCode := flag.String("remote-scraper-auth-code", "", "Authentication code for remote scraper")
 	flag.Parse()
 
 	// Initialize video proxy
@@ -54,6 +57,18 @@ func main() {
 	// Initialize cache / DB
 	scraper.InitDB()
 	defer scraper.DB.Close()
+
+	// Initialize remote scraper
+	if len(*authCode) != 0 {
+		remoteTCPAddr, err := net.ResolveTCPAddr("tcp", *remoteAddr)
+		if err != nil {
+			panic(err)
+		}
+		err = scraper.InitRemoteScraper(remoteTCPAddr, []byte(*authCode))
+		if err != nil {
+			panic(err)
+		}
+	}
 
 	// Evict cache every minute
 	go func() {

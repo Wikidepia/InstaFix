@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"errors"
 	"log/slog"
 	"net"
@@ -20,25 +21,41 @@ type remoteResult struct {
 var sessCount atomic.Int32
 var inChan chan remoteResult
 
-func init() {
+func InitRemoteScraper(listenAddr *net.TCPAddr, authCode []byte) error {
+	if len(authCode) > 8 {
+		return errors.New("auth code max length is 8 bytes")
+	}
+
 	inChan = make(chan remoteResult)
 
-	ln, err := net.Listen("tcp", "0.0.0.0:4444")
+	ln, err := net.ListenTCP("tcp", listenAddr)
 	if err != nil {
-		return
+		return err
 	}
 	slog.Info("remote scraper is listening on", "address", ln.Addr())
 
-	go func() {
+	go func(ln *net.TCPListener, authCode []byte) {
 		for {
 			conn, err := ln.Accept()
 			if err != nil {
-				return
+				conn.Close()
+				continue
+			}
+
+			// deadline for read 5s
+			conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+
+			authBytes := make([]byte, 8)
+			n, err := conn.Read(authBytes)
+			if err != nil || !bytes.Equal(authBytes[:n], authCode) {
+				conn.Close()
+				continue
 			}
 
 			go handleConnection(conn)
 		}
-	}()
+	}(ln, authCode)
+	return err
 }
 
 func handleConnection(conn net.Conn) {
