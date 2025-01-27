@@ -111,6 +111,12 @@ func handleConnection(conn net.Conn) {
 					rm.outChan <- err
 					return
 				}
+
+				if rm.instaData.Username == "" {
+					slog.Error("failed to get post ID", "err", err)
+					rm.outChan <- err
+					return
+				}
 				rm.outChan <- nil
 			}
 		}(stream)
