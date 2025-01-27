@@ -12,6 +12,7 @@ require (
 	github.com/klauspost/compress v1.17.11
 	github.com/tdewolff/parse/v2 v2.7.19
 	github.com/tidwall/gjson v1.18.0
+	github.com/xtaci/smux v1.5.33
 	go.etcd.io/bbolt v1.3.11
 	golang.org/x/image v0.22.0
 	golang.org/x/net v0.31.0

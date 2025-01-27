@@ -16,7 +16,6 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/kelindar/binary"
 	"github.com/klauspost/compress/gzhttp"
-	"github.com/klauspost/compress/zstd"
 	"github.com/tdewolff/parse/v2"
 	"github.com/tdewolff/parse/v2/js"
 	"github.com/tidwall/gjson"
@@ -26,13 +25,11 @@ import (
 )
 
 var (
-	RemoteScraperAddr string
-	ErrNotFound       = errors.New("post not found")
-	timeout           = 5 * time.Second
-	transport         http.RoundTripper
-	transportNoProxy  *http.Transport
-	sflightScraper    singleflight.Group
-	remoteZSTDReader  *zstd.Decoder
+	ErrNotFound      = errors.New("post not found")
+	timeout          = 5 * time.Second
+	transport        http.RoundTripper
+	transportNoProxy *http.Transport
+	sflightScraper   singleflight.Group
 )
 
 //go:embed dictionary.bin
@@ -51,15 +48,9 @@ type InstaData struct {
 }
 
 func init() {
-	var err error
 	transport = gzhttp.Transport(http.DefaultTransport, gzhttp.TransportAlwaysDecompress(true))
 	transportNoProxy = http.DefaultTransport.(*http.Transport).Clone()
 	transportNoProxy.Proxy = nil // Skip any proxy
-
-	remoteZSTDReader, err = zstd.NewReader(nil, zstd.WithDecoderLowmem(true), zstd.WithDecoderDicts(zstdDict))
-	if err != nil {
-		panic(err)
-	}
 }
 
 func GetData(postID string) (*InstaData, error) {
@@ -147,34 +138,10 @@ func GetData(postID string) (*InstaData, error) {
 
 func (i *InstaData) ScrapeData() error {
 	// Scrape from remote scraper if available
-	if len(RemoteScraperAddr) > 0 {
-		remoteClient := http.Client{Transport: transportNoProxy, Timeout: timeout}
-		req, err := http.NewRequest("GET", RemoteScraperAddr+"/scrape/"+i.PostID, nil)
-		if err != nil {
-			return err
-		}
-		req.Header.Set("Accept-Encoding", "zstd.dict")
-		res, err := remoteClient.Do(req)
-		if err == nil && res != nil {
-			defer res.Body.Close()
-			remoteData, err := io.ReadAll(res.Body)
-			if err == nil && res.StatusCode == 200 {
-				remoteDecomp, err := remoteZSTDReader.DecodeAll(remoteData, nil)
-				if err != nil {
-					return err
-				}
-				if err := binary.Unmarshal(remoteDecomp, i); err == nil {
-					if len(i.Username) > 0 {
-						slog.Info("Data parsed from remote scraper", "postID", i.PostID)
-						return nil
-					}
-				}
-			}
-			slog.Error("Failed to scrape data from remote scraper", "postID", i.PostID, "status", res.StatusCode, "err", err)
-		}
-		if err != nil {
-			slog.Error("Failed when trying to scrape data from remote scraper", "postID", i.PostID, "err", err)
-		}
+	if err := ScrapeRemote(i); err == nil {
+		return nil
+	} else {
+		slog.Error("Failed to scrape data from remote scraper", "postID", i.PostID, "err", err)
 	}
 
 	client := http.Client{Transport: transport, Timeout: timeout}
