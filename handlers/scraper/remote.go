@@ -51,6 +51,7 @@ func InitRemoteScraper(listenAddr *net.TCPAddr, authCode []byte) error {
 				conn.Close()
 				continue
 			}
+			conn.SetReadDeadline(time.Time{})
 
 			go handleConnection(conn)
 		}
