@@ -148,3 +148,7 @@ func ScrapeRemote(i *InstaData) error {
 		return errors.New("failed to get data from remote scraper")
 	}
 }
+
+func GetRemoteSessCount() int {
+	return int(sessCount.Load())
+}

@@ -25,11 +25,10 @@ import (
 )
 
 var (
-	ErrNotFound      = errors.New("post not found")
-	timeout          = 5 * time.Second
-	transport        http.RoundTripper
-	transportNoProxy *http.Transport
-	sflightScraper   singleflight.Group
+	ErrNotFound    = errors.New("post not found")
+	timeout        = 5 * time.Second
+	transport      http.RoundTripper
+	sflightScraper singleflight.Group
 )
 
 //go:embed dictionary.bin
@@ -49,8 +48,6 @@ type InstaData struct {
 
 func init() {
 	transport = gzhttp.Transport(http.DefaultTransport, gzhttp.TransportAlwaysDecompress(true))
-	transportNoProxy = http.DefaultTransport.(*http.Transport).Clone()
-	transportNoProxy.Proxy = nil // Skip any proxy
 }
 
 func GetData(postID string) (*InstaData, error) {

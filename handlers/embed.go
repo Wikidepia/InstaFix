@@ -30,7 +30,7 @@ func mediaidToCode(mediaID int) string {
 }
 
 func getSharePostID(postID string) (string, error) {
-	req, err := http.NewRequest("HEAD", "https://www.instagram.com/share/reel/"+postID+"/", nil)
+	req, err := http.NewRequest("HEAD", "https://www.instagram.com/share/p/"+postID+"/", nil)
 	if err != nil {
 		return postID, err
 	}
@@ -43,11 +43,11 @@ func getSharePostID(postID string) (string, error) {
 	if err != nil {
 		return postID, err
 	}
-	postID = path.Base(redirURL.Path)
-	if postID == "login" {
+	postIDTemp := path.Base(redirURL.Path)
+	if postIDTemp == "login" {
 		return postID, errors.New("not logged in")
 	}
-	return postID, nil
+	return postIDTemp, nil
 }
 
 func Embed(w http.ResponseWriter, r *http.Request) {
@@ -98,7 +98,7 @@ func Embed(w http.ResponseWriter, r *http.Request) {
 		postID = mediaidToCode(mediaID)
 	} else if strings.Contains(r.URL.Path, "/share/") {
 		postID, err = getSharePostID(postID)
-		if err != nil {
+		if err != nil && scraper.GetRemoteSessCount() == 0 {
 			slog.Error("Failed to get new postID from share URL", "postID", postID, "err", err)
 			viewsData.Description = "Failed to get new postID from share URL"
 			views.Embed(viewsData, w)
@@ -148,19 +148,19 @@ func Embed(w http.ResponseWriter, r *http.Request) {
 	case mediaNum == 0 && isImage && len(item.Medias) > 1:
 		viewsData.Card = "summary_large_image"
 		sb.WriteString("/grid/")
-		sb.WriteString(postID)
+		sb.WriteString(item.PostID)
 		viewsData.ImageURL = sb.String()
 	case isImage:
 		viewsData.Card = "summary_large_image"
 		sb.WriteString("/images/")
-		sb.WriteString(postID)
+		sb.WriteString(item.PostID)
 		sb.WriteString("/")
 		sb.WriteString(strconv.Itoa(max(1, mediaNum)))
 		viewsData.ImageURL = sb.String()
 	default:
 		viewsData.Card = "player"
 		sb.WriteString("/videos/")
-		sb.WriteString(postID)
+		sb.WriteString(item.PostID)
 		sb.WriteString("/")
 		sb.WriteString(strconv.Itoa(max(1, mediaNum)))
 		viewsData.VideoURL = sb.String()
