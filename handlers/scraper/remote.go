@@ -65,6 +65,7 @@ func handleConnection(conn net.Conn) {
 		conn.Close()
 		wg.Done()
 	}()
+	wg.Add(1)
 
 	for rm := range inChan {
 		var err error
