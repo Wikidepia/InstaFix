@@ -86,7 +86,7 @@ func handleConnection(conn net.Conn) {
 			}()
 
 			for rm := range inChan {
-				if err := stream.SetDeadline(time.Now().Add(3 * time.Second)); err != nil {
+				if err := stream.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {
 					slog.Error("failed to set deadline", "err", err)
 					rm.outChan <- err
 					return
@@ -110,12 +110,12 @@ func handleConnection(conn net.Conn) {
 				if err = binary.Unmarshal(outBuf[:n], rm.instaData); err != nil {
 					slog.Error("failed to unmarshal data", "err", err)
 					rm.outChan <- err
-					return
+					continue
 				}
 
 				if rm.instaData.Username == "" {
 					rm.outChan <- errors.New("remote scraper returns empty data")
-					return
+					continue
 				}
 				rm.outChan <- nil
 			}
