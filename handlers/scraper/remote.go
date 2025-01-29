@@ -62,9 +62,11 @@ func handleConnection(conn net.Conn) {
 	var wg sync.WaitGroup
 
 	defer func() {
+		sessCount.Add(-1)
 		conn.Close()
 		wg.Done()
 	}()
+	sessCount.Add(1)
 	wg.Add(1)
 
 	for rm := range inChan {
