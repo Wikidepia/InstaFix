@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log/slog"
 	"net"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -37,7 +36,6 @@ func InitRemoteScraper(listenAddr *net.TCPAddr, authCode []byte) error {
 		for {
 			conn, err := ln.Accept()
 			if err != nil {
-				conn.Close()
 				continue
 			}
 
@@ -59,18 +57,13 @@ func InitRemoteScraper(listenAddr *net.TCPAddr, authCode []byte) error {
 }
 
 func handleConnection(conn net.Conn) {
-	var wg sync.WaitGroup
-
 	defer func() {
 		sessCount.Add(-1)
 		conn.Close()
-		wg.Done()
 	}()
 	sessCount.Add(1)
-	wg.Add(1)
 
 	for rm := range inChan {
-		var err error
 		if err := conn.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {
 			slog.Error("failed to set deadline", "err", err)
 			rm.outChan <- err
@@ -78,7 +71,7 @@ func handleConnection(conn net.Conn) {
 		}
 
 		buf := []byte(rm.instaData.PostID)
-		if _, err = conn.Write(buf); err != nil {
+		if _, err := conn.Write(buf); err != nil {
 			slog.Error("failed to write to stream", "err", err)
 			rm.outChan <- err
 			return
@@ -92,7 +85,7 @@ func handleConnection(conn net.Conn) {
 			return
 		}
 
-		if err = binary.Unmarshal(outBuf[:n], rm.instaData); err != nil {
+		if err := binary.Unmarshal(outBuf[:n], rm.instaData); err != nil {
 			slog.Error("failed to unmarshal data", "err", err)
 			rm.outChan <- err
 			continue
@@ -104,8 +97,6 @@ func handleConnection(conn net.Conn) {
 		}
 		rm.outChan <- nil
 	}
-
-	wg.Wait()
 }
 
 func ScrapeRemote(i *InstaData) error {
