@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"errors"
+	"io"
 	"log/slog"
 	"net"
 	"sync/atomic"
@@ -24,7 +25,7 @@ func InitRemoteScraper(listenAddr *net.TCPAddr, authCode []byte) error {
 		return errors.New("auth code max length is 8 bytes")
 	}
 
-	inChan = make(chan remoteResult)
+	inChan = make(chan remoteResult, 1000)
 
 	ln, err := net.ListenTCP("tcp", listenAddr)
 	if err != nil {
@@ -63,39 +64,48 @@ func handleConnection(conn net.Conn) {
 	}()
 	sessCount.Add(1)
 
-	for rm := range inChan {
-		if err := conn.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {
-			slog.Error("failed to set deadline", "err", err)
-			rm.outChan <- err
-			return
-		}
+	for {
+		select {
+		case rm := <-inChan:
+			if err := conn.SetWriteDeadline(time.Now().Add(500 * time.Millisecond)); err != nil {
+				slog.Error("failed to set deadline", "err", err)
+				rm.outChan <- err
+				return
+			}
 
-		buf := []byte(rm.instaData.PostID)
-		if _, err := conn.Write(buf); err != nil {
-			slog.Error("failed to write to stream", "err", err)
-			rm.outChan <- err
-			return
-		}
+			buf := []byte(rm.instaData.PostID)
+			_, err := conn.Write(buf)
+			if err != nil {
+				if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
+					rm.outChan <- err
+					continue
+				} else if err != io.EOF {
+					rm.outChan <- err
+					slog.Error("write error", "err", err)
+					return
+				}
+			}
 
-		outBuf := make([]byte, 1024*1024)
-		n, err := conn.Read(outBuf)
-		if err != nil {
-			slog.Error("failed to read from stream", "err", err)
-			rm.outChan <- err
-			return
-		}
+			outBuf := make([]byte, 1024*1024)
+			n, err := conn.Read(outBuf)
+			if err != nil {
+				slog.Error("failed to read from stream", "err", err)
+				rm.outChan <- err
+				return
+			}
 
-		if err := binary.Unmarshal(outBuf[:n], rm.instaData); err != nil {
-			slog.Error("failed to unmarshal data", "err", err)
-			rm.outChan <- err
-			continue
-		}
+			if err := binary.Unmarshal(outBuf[:n], rm.instaData); err != nil {
+				slog.Error("failed to unmarshal data", "err", err)
+				rm.outChan <- err
+				continue
+			}
 
-		if rm.instaData.Username == "" {
-			rm.outChan <- errors.New("remote scraper returns empty data")
-			continue
+			if rm.instaData.Username == "" {
+				rm.outChan <- errors.New("remote scraper returns empty data")
+				continue
+			}
+			rm.outChan <- nil
 		}
-		rm.outChan <- nil
 	}
 }
 
