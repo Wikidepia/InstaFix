@@ -93,6 +93,10 @@ func handleConnection(conn net.Conn) {
 				rm.outChan <- err
 				return
 			}
+			if n == 1 {
+				rm.outChan <- errors.New("remote scraper returns empty data")
+				continue
+			}
 
 			if err := binary.Unmarshal(outBuf[:n], rm.instaData); err != nil {
 				slog.Error("failed to unmarshal data", "err", err)
