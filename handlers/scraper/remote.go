@@ -85,7 +85,7 @@ func handleConnection(conn net.Conn) {
 			var fromRemote bytes.Buffer
 			dec := gob.NewDecoder(&fromRemote)
 
-			n, err := conn.Read(tmp)
+			n, err := conn.Read(tmp[:])
 			if err != nil {
 				if err != io.EOF {
 					slog.Error("failed to read data", "err", err)
