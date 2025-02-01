@@ -139,7 +139,7 @@ func (i *InstaData) ScrapeData() error {
 	if err := ScrapeRemote(i); err == nil {
 		return nil
 	} else {
-		fmt.Println(i)
+		fmt.Println(GetRemoteSessCount())
 		slog.Error("Failed to scrape data from remote scraper", "postID", i.PostID, "err", err)
 	}
 

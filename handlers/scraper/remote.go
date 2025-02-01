@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net"
@@ -80,23 +81,24 @@ func handleConnection(conn net.Conn) {
 				return
 			}
 
-			outBuf := make([]byte, 1024*1024)
-			n, err := conn.Read(outBuf)
-			if err != nil {
-				slog.Error("failed to read from stream", "err", err)
-				rm.outChan <- err
-				return
-			}
-			if n == 1 {
-				rm.outChan <- errors.New("remote scraper returns empty data")
-				continue
+			var fromRemote bytes.Buffer
+			dec := gob.NewDecoder(&fromRemote)
+
+			tmp := make([]byte, 256)
+			for {
+				n, err := conn.Read(tmp)
+				if err != nil {
+					if err != io.EOF {
+						slog.Error("failed to read data", "err", err)
+						rm.outChan <- err
+					}
+					break
+				}
+				fromRemote.Write(tmp[:n])
 			}
 
-			var network bytes.Buffer
-			dec := gob.NewDecoder(&network)
-			network.Write(outBuf[:(n - 8)])
-			err = dec.Decode(rm.instaData)
-			if err != nil {
+			if err := dec.Decode(rm.instaData); err != nil {
+				fmt.Println(fromRemote.Bytes())
 				slog.Error("failed to decode data", "err", err)
 				rm.outChan <- err
 				continue
