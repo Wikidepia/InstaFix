@@ -85,6 +85,12 @@ func handleConnection(conn net.Conn) {
 				}
 			}
 
+			if err := conn.SetReadDeadline(time.Now().Add(3 * time.Second)); err != nil {
+				slog.Error("failed to set deadline", "err", err)
+				rm.outChan <- err
+				return
+			}
+
 			outBuf := make([]byte, 1024*1024)
 			n, err := conn.Read(outBuf)
 			if err != nil {
