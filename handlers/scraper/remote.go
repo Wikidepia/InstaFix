@@ -39,18 +39,6 @@ func InitRemoteScraper(listenAddr *net.TCPAddr, authCode []byte) error {
 				continue
 			}
 
-			// deadline for read 5s
-			conn.SetReadDeadline(time.Now().Add(5 * time.Second))
-
-			authBytes := make([]byte, 8)
-			n, err := conn.Read(authBytes)
-			if err != nil || !bytes.Equal(authBytes[:n], authCode) {
-				conn.Close()
-				continue
-			}
-			conn.Write([]byte("ok"))
-			conn.SetReadDeadline(time.Time{})
-
 			go handleConnection(conn)
 		}
 	}(ln, authCode)
@@ -106,7 +94,7 @@ func handleConnection(conn net.Conn) {
 
 			var network bytes.Buffer
 			dec := gob.NewDecoder(&network)
-			network.Write(outBuf[:n])
+			network.Write(outBuf[:(n - 8)])
 			err = dec.Decode(rm.instaData)
 			if err != nil {
 				slog.Error("failed to decode data", "err", err)
