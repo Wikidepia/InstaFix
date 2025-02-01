@@ -91,6 +91,7 @@ func handleConnection(conn net.Conn) {
 					if err != io.EOF {
 						slog.Error("failed to read data", "err", err)
 						rm.outChan <- err
+						return
 					}
 					break
 				}
