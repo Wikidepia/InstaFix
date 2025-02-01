@@ -4,6 +4,7 @@ import (
 	"bytes"
 	_ "embed"
 	"errors"
+	"fmt"
 	"instafix/utils"
 	"io"
 	"log/slog"
@@ -138,6 +139,7 @@ func (i *InstaData) ScrapeData() error {
 	if err := ScrapeRemote(i); err == nil {
 		return nil
 	} else {
+		fmt.Println(i)
 		slog.Error("Failed to scrape data from remote scraper", "postID", i.PostID, "err", err)
 	}
 

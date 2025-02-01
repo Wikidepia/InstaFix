@@ -2,14 +2,13 @@ package handlers
 
 import (
 	"bytes"
+	"encoding/gob"
 	"errors"
 	"io"
 	"log/slog"
 	"net"
 	"sync/atomic"
 	"time"
-
-	"github.com/kelindar/binary"
 )
 
 type remoteResult struct {
@@ -75,6 +74,7 @@ func handleConnection(conn net.Conn) {
 
 			buf := []byte(rm.instaData.PostID)
 			_, err := conn.Write(buf)
+			slog.Error("failed to write to stream", "err", err)
 			if err != nil {
 				if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
 					rm.outChan <- err
@@ -98,8 +98,12 @@ func handleConnection(conn net.Conn) {
 				continue
 			}
 
-			if err := binary.Unmarshal(outBuf[:n], rm.instaData); err != nil {
-				slog.Error("failed to unmarshal data", "err", err)
+			var network bytes.Buffer
+			dec := gob.NewDecoder(&network)
+			network.Write(outBuf[:n])
+			err = dec.Decode(rm.instaData)
+			if err != nil {
+				slog.Error("failed to decode data", "err", err)
 				rm.outChan <- err
 				continue
 			}
