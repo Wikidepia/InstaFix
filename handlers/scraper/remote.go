@@ -52,6 +52,7 @@ func handleConnection(conn net.Conn) {
 		conn.Close()
 	}()
 	sessCount.Add(1)
+	tmp := make([]byte, 1024*128)
 
 	for {
 		select {
@@ -84,19 +85,16 @@ func handleConnection(conn net.Conn) {
 			var fromRemote bytes.Buffer
 			dec := gob.NewDecoder(&fromRemote)
 
-			tmp := make([]byte, 256)
-			for {
-				n, err := conn.Read(tmp)
-				if err != nil {
-					if err != io.EOF {
-						slog.Error("failed to read data", "err", err)
-						rm.outChan <- err
-						return
-					}
-					break
+			n, err := conn.Read(tmp)
+			if err != nil {
+				if err != io.EOF {
+					slog.Error("failed to read data", "err", err)
+					rm.outChan <- err
+					return
 				}
-				fromRemote.Write(tmp[:n])
+				break
 			}
+			fromRemote.Write(tmp[:n])
 
 			if err := dec.Decode(rm.instaData); err != nil {
 				fmt.Println(fromRemote.Bytes())
