@@ -74,7 +74,6 @@ func handleConnection(conn net.Conn) {
 
 			buf := []byte(rm.instaData.PostID)
 			_, err := conn.Write(buf)
-			slog.Error("failed to write to stream", "err", err)
 			if err != nil {
 				if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
 					rm.outChan <- err
