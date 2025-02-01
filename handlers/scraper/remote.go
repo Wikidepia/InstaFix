@@ -48,6 +48,7 @@ func InitRemoteScraper(listenAddr *net.TCPAddr, authCode []byte) error {
 				conn.Close()
 				continue
 			}
+			conn.Write([]byte("ok"))
 			conn.SetReadDeadline(time.Time{})
 
 			go handleConnection(conn)
@@ -141,8 +142,6 @@ func ScrapeRemote(i *InstaData) error {
 	select {
 	case err := <-remoteRes.outChan:
 		return err
-	case <-time.After(5 * time.Second):
-		return errors.New("failed to get data from remote scraper")
 	}
 }
 
