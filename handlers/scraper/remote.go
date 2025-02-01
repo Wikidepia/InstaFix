@@ -92,7 +92,10 @@ func handleConnection(conn net.Conn) {
 					rm.outChan <- err
 					return
 				}
-				break
+			}
+			if n == 0 {
+				rm.outChan <- errors.New("remote scraper returns empty data")
+				continue
 			}
 			fromRemote.Write(tmp[:n])
 
