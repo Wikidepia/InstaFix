@@ -2,16 +2,17 @@ package handlers
 
 import (
 	"errors"
-	scraper "instafix/handlers/scraper"
-	"instafix/utils"
-	"instafix/views"
-	"instafix/views/model"
 	"log/slog"
 	"net/http"
 	"net/url"
 	"path"
 	"strconv"
 	"strings"
+
+	scraper "instafix/handlers/scraper"
+	"instafix/utils"
+	"instafix/views"
+	"instafix/views/model"
 
 	"github.com/go-chi/chi/v5"
 )

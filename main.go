@@ -2,9 +2,6 @@ package main
 
 import (
 	"flag"
-	"instafix/handlers"
-	scraper "instafix/handlers/scraper"
-	"instafix/views"
 	"log/slog"
 	"net/http"
 	_ "net/http/pprof"
@@ -13,6 +10,10 @@ import (
 	"strings"
 	"time"
 
+	"instafix/handlers"
+	scraper "instafix/handlers/scraper"
+	"instafix/views"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	bolt "go.etcd.io/bbolt"
@@ -20,7 +21,7 @@ import (
 
 func init() {
 	// Create static folder if not exists
-	os.Mkdir("static", 0755)
+	os.Mkdir("static", 0o755)
 }
 
 func main() {

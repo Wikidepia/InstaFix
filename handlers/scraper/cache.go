@@ -8,15 +8,17 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var DB *bolt.DB
-var LRU *freelru.SyncedLRU[string, bool]
+var (
+	DB  *bolt.DB
+	LRU *freelru.SyncedLRU[string, bool]
+)
 
 func hashStringXXHASH(s string) uint32 {
 	return uint32(xxhash.Sum64String(s))
 }
 
 func InitDB() {
-	db, err := bolt.Open("cache.db", 0600, nil)
+	db, err := bolt.Open("cache.db", 0o600, nil)
 	if err != nil {
 		panic(err)
 	}

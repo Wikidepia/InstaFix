@@ -1,10 +1,11 @@
 package handlers
 
 import (
+	"net/http"
+
 	"instafix/utils"
 	"instafix/views"
 	"instafix/views/model"
-	"net/http"
 )
 
 func OEmbed(w http.ResponseWriter, r *http.Request) {

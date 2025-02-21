@@ -1,9 +1,10 @@
 package handlers
 
 import (
-	scraper "instafix/handlers/scraper"
 	"net/http"
 	"strconv"
+
+	scraper "instafix/handlers/scraper"
 
 	"github.com/go-chi/chi/v5"
 )

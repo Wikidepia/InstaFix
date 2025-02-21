@@ -3,7 +3,6 @@ package handlers
 import (
 	"bytes"
 	"errors"
-	"instafix/utils"
 	"io"
 	"log/slog"
 	"net/http"
@@ -11,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"instafix/utils"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/kelindar/binary"

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"image"
 	"image/jpeg"
-	scraper "instafix/handlers/scraper"
 	"io"
 	"log/slog"
 	"math"
@@ -16,25 +15,29 @@ import (
 	"sync"
 	"time"
 
+	scraper "instafix/handlers/scraper"
+
 	"github.com/RyanCarrier/dijkstra/v2"
 	"github.com/go-chi/chi/v5"
 	"golang.org/x/image/draw"
 	"golang.org/x/sync/singleflight"
 )
 
-var timeout = 60 * time.Second
-var transport = &http.Transport{
-	Proxy: nil, // Skip any proxy
-	DialContext: (&net.Dialer{
-		Timeout:   30 * time.Second,
-		KeepAlive: 30 * time.Second,
-	}).DialContext,
-	ForceAttemptHTTP2:     true,
-	MaxIdleConns:          100,
-	IdleConnTimeout:       90 * time.Second,
-	TLSHandshakeTimeout:   10 * time.Second,
-	ExpectContinueTimeout: 1 * time.Second,
-}
+var (
+	timeout   = 60 * time.Second
+	transport = &http.Transport{
+		Proxy: nil, // Skip any proxy
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
+)
 var sflightGrid singleflight.Group
 
 // getHeight returns the height of the rows, imagesWH [w,h]
