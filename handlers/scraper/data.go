@@ -269,7 +269,7 @@ func (i *InstaData) ScrapeData() error {
 				}
 			}
 		}
-		slog.Error("Failed to scrape data from remote scraper", "postID", i.PostID, "status", res.StatusCode, "err", err)
+		slog.Error("Failed to scrape data from remote scraper", "postID", i.PostID, "err", err)
 	}
 
 	client := http.Client{Transport: transport, Timeout: timeout}
