@@ -44,11 +44,10 @@ func getSharePostID(postID string) (string, error) {
 	if err != nil {
 		return postID, err
 	}
-	postID = path.Base(redirURL.Path)
-	if postID == "login" {
+	if path.Base(redirURL.Path) == "login" {
 		return postID, errors.New("not logged in")
 	}
-	return postID, nil
+	return path.Base(redirURL.Path), nil
 }
 
 func Embed(w http.ResponseWriter, r *http.Request) {
