@@ -320,7 +320,7 @@ func (i *InstaData) ScrapeData() error {
 	if err != nil {
 		slog.Error("Failed to parse data from scrapeFromEmbedHTML", "postID", i.PostID, "err", err)
 	}
-	return nil
+	return err
 }
 
 func GetData(postID string) (*InstaData, error) {
