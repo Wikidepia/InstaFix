@@ -120,7 +120,7 @@ func UnescapeJSONString(s string) string {
 	}
 
 	// Slow path - unescape string.
-	b := S2B(s) // It is safe to do, since s points to a byte slice in Parser.b.
+	b := []byte(s) // It is safe to do, since s points to a byte slice in Parser.b.
 	b = b[:n]
 	s = s[n+1:]
 	for len(s) > 0 {
@@ -190,7 +190,7 @@ func UnescapeJSONString(s string) string {
 		b = append(b, s[:n]...)
 		s = s[n+1:]
 	}
-	return B2S(b)
+	return string(b)
 }
 
 func EscapeJSONString(src string) string {

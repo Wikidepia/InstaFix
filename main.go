@@ -4,7 +4,6 @@ import (
 	"flag"
 	"instafix/handlers"
 	scraper "instafix/handlers/scraper"
-	"instafix/utils"
 	"instafix/views"
 	"log/slog"
 	"net/http"
@@ -120,7 +119,7 @@ func evictCache() {
 		}
 		c := ttlBucket.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
-			if n, err := strconv.ParseInt(utils.B2S(k), 10, 64); err == nil {
+			if n, err := strconv.ParseInt(string(k), 10, 64); err == nil {
 				if n < curTime {
 					ttlBucket.Delete(k)
 					dataBucket.Delete(v)

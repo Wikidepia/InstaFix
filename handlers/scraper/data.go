@@ -150,7 +150,7 @@ func (i *InstaData) parseTimeSliceImpl(embedBody []byte) error {
 		if tt == js.StringToken && bytes.Contains(text, []byte("shortcode_media")) {
 			// Strip quotes from start and end
 			text = text[1 : len(text)-1]
-			unescapeData := utils.UnescapeJSONString(utils.B2S(text))
+			unescapeData := utils.UnescapeJSONString(string(text))
 			if !gjson.Valid(unescapeData) {
 				return errors.New("failed to parse data from TimeSliceImpl")
 			}
@@ -387,14 +387,14 @@ func GetData(postID string) (*InstaData, error) {
 			if dataBucket == nil {
 				return nil
 			}
-			dataBucket.Put(utils.S2B(item.PostID), bb)
+			dataBucket.Put([]byte(item.PostID), bb)
 
 			ttlBucket := tx.Bucket([]byte("ttl"))
 			if ttlBucket == nil {
 				return nil
 			}
 			expTime := strconv.FormatInt(time.Now().Add(24*time.Hour).UnixNano(), 10)
-			ttlBucket.Put(utils.S2B(expTime), utils.S2B(item.PostID))
+			ttlBucket.Put([]byte(expTime), []byte(item.PostID))
 			return nil
 		})
 		if err != nil {
