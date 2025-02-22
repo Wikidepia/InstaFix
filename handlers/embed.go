@@ -96,7 +96,7 @@ func Embed(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		postID = mediaidToCode(mediaID)
-	} else if strings.Contains(r.URL.Path, "/share/") {
+	} else if strings.Contains(r.URL.Path, "/share/") || postID[0] == 'B' {
 		postID, err = getSharePostID(postID)
 		if err != nil && len(scraper.RemoteScraperAddr) == 0 {
 			slog.Error("Failed to get new postID from share URL", "postID", postID, "err", err)
