@@ -100,6 +100,9 @@ func (i *InstaData) parseGQL(gqlGJSON gjson.Result) error {
 
 	// Get username
 	i.Username = item.Get("owner.username").String()
+	if len(i.Username) == 0 {
+		return ErrNotFound
+	}
 
 	// Get caption
 	i.Caption = strings.TrimSpace(item.Get("edge_media_to_caption.edges.0.node.text").String())
@@ -226,6 +229,9 @@ func (i *InstaData) parseEmbedHTML(embedHTML []byte) error {
 
 	// Get username
 	username := doc.Find(".UsernameText").Text()
+	if len(username) == 0 {
+		return ErrNotFound
+	}
 
 	// Get caption
 	captionComments := doc.Find(".CaptionComments")
@@ -244,6 +250,75 @@ func (i *InstaData) parseEmbedHTML(embedHTML []byte) error {
 	i.Medias = append(i.Medias, Media{
 		TypeName: typename,
 		URL:      mediaURL,
+	})
+	return nil
+}
+
+func (i *InstaData) scrapeFromPage(postID string) error {
+	client := http.Client{
+		Transport: transport,
+	}
+	req, err := http.NewRequest("GET", "https://www.instagram.com/p/"+postID+"/", nil)
+	if err != nil {
+		return err
+	}
+
+	buf := new(bytes.Buffer)
+	var res *http.Response
+	// TODO Sometimes api returns 5xx error, retrying doesn't help.
+	for i := 0; i < 3; i++ {
+		res, err = client.Do(req)
+		if err != nil {
+			continue
+		}
+		defer res.Body.Close()
+		buf.Reset() // Reset buffer
+		if _, err = buf.ReadFrom(res.Body); err != nil {
+			continue
+		}
+		if bytes.Contains(buf.Bytes(), []byte("require_login")) {
+			continue
+		}
+		break
+	}
+	if err != nil {
+		return err
+	}
+
+	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(buf.Bytes()))
+	if err != nil {
+		return err
+	}
+
+	// Get username
+	twitterTitle := doc.Find(`meta[name="twitter:title"]`).AttrOr("content", "")
+
+	// real name (@username) • Instagram reel
+	var username string
+	usernameLeft := strings.Split(twitterTitle, "(")
+	if len(usernameLeft) == 2 {
+		usernameRight := strings.Split(usernameLeft[1], ")")
+		username = strings.Trim(usernameRight[0], "@")
+	} else {
+		return errors.New("scrapeFromPage: username not found")
+	}
+
+	// Get caption
+	ogDescription := doc.Find(`meta[name="description"]`).AttrOr("content", "")
+
+	// xxx likes ... : "<real caption>"
+	var caption string
+	captionTrim := strings.Split(ogDescription, ":")
+	if len(captionTrim) == 2 {
+		caption = strings.Trim(captionTrim[1], ": ")
+	}
+
+	i.PostID = postID
+	i.Username = username
+	i.Caption = caption
+	i.Medias = append(i.Medias, Media{
+		TypeName: "GraphImage",
+		URL:      doc.Find(".EmbeddedMediaImage").AttrOr("src", ""),
 	})
 	return nil
 }
@@ -305,6 +380,8 @@ func (i *InstaData) ScrapeData() error {
 	err = i.parseTimeSliceImpl(body)
 	if err != nil {
 		slog.Error("Failed to parse data from parseTimeSliceImpl", "postID", i.PostID, "err", err)
+	} else {
+		return nil
 	}
 
 	videoBlocked := bytes.Contains(body, []byte("WatchOnInstagram"))
@@ -313,6 +390,8 @@ func (i *InstaData) ScrapeData() error {
 		err := i.scrapeFromGQL(i.PostID)
 		if err != nil {
 			slog.Error("Failed to scrape data from scrapeFromGQL", "postID", i.PostID, "err", err)
+		} else {
+			return nil
 		}
 	}
 
@@ -320,6 +399,16 @@ func (i *InstaData) ScrapeData() error {
 	err = i.parseEmbedHTML(body)
 	if err != nil {
 		slog.Error("Failed to parse data from scrapeFromEmbedHTML", "postID", i.PostID, "err", err)
+	} else {
+		return nil
+	}
+
+	// Scrape from page
+	err = i.scrapeFromPage(i.PostID)
+	if err != nil {
+		slog.Error("Failed to scrape data from scrapeFromPage", "postID", i.PostID, "err", err)
+	} else {
+		return nil
 	}
 	return err
 }
