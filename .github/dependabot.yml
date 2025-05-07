@@ -1,0 +1,13 @@
+version: 2
+updates:
+  # Enable version updates for Go
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  # Enable version updates for Github Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
